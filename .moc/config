@@ -1,3 +1,6 @@
+# TiMidity Solution
+TiMidity_Config = no
+
 # Show file titles (title, author, album) instead of file names.
 ReadTags		= yes
 

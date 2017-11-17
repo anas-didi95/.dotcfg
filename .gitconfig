@@ -1,0 +1,17 @@
+[user]
+	email = anas.didi95@gmail.com
+	name = Anas Juwaidi
+[branch]
+	autosetuprebase = always
+[color]
+	ui = true
+	status = auto
+	branch = auto
+[core]
+	editor = vim
+[merge]
+	tool = vimdiff
+[push]
+	default = current 
+[credential]
+	helper = cache --timeout=3600

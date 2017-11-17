@@ -1,0 +1,40 @@
+"*":
+  "atom-beautify":
+    general:
+      _analyticsUserId: "9fbc1b71-0af4-4e29-ba7e-51df59d63fa7"
+  core:
+    customFileTypes:
+      "source.ini": [
+        ".buckconfig"
+        ".hgrc"
+        ".flowconfig"
+      ]
+      "source.json": [
+        "BUCK.autodeps"
+      ]
+      "source.python": [
+        "BUCK"
+      ]
+    disabledPackages: [
+      "tree-view"
+    ]
+    telemetryConsent: "limited"
+  editor:
+    fontFamily: "Fira Code"
+    lineHeight: 2
+  "exception-reporting":
+    userId: "6b5bbb5b-9a30-4264-9df8-f6e562d45153"
+  firacode:
+    scopes: [
+      "*"
+    ]
+  nuclide:
+    installRecommendedPackages: true
+    "nuclide-home":
+      showHome: false
+  welcome:
+    showOnStartup: false
+".blade.html.php.text":
+  editor:
+    commentEnd: " --}}"
+    commentStart: "{{-- "

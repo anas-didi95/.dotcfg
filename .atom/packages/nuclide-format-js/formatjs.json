@@ -1,0 +1,18 @@
+{
+  "blacklist": [],
+  "relativize": true,
+  "ignorePatterns": [
+    "node_modules"
+  ],
+  "aliases": [
+    "babel", "babel-core",
+    "invariant", "assert",
+    "jscs", "jscodeshift"
+  ],
+  "aliasesToRelativize": [],
+  "builtIns": [
+    "Map",
+    "Set"
+  ],
+  "builtInTypes": []
+}

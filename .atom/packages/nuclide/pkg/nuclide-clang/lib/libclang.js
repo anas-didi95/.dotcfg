@@ -4,7 +4,10 @@ var _asyncToGenerator = _interopRequireDefault(require('async-to-generator'));
 
 let getClangProvidersForSource = (() => {
   var _ref = (0, _asyncToGenerator.default)(function* (src) {
-    return (0, (_collection || _load_collection()).arrayCompact)((yield Promise.all([...clangProviders].map((() => {
+    // $FlowFixMe(>=0.55.0) Flow suppress
+    return (0, (_collection || _load_collection()).arrayCompact)((
+    // $FlowFixMe(>=0.55.0) Flow suppress
+    yield Promise.all([...clangProviders].map((() => {
       var _ref2 = (0, _asyncToGenerator.default)(function* (provider) {
         if (yield provider.supportsSource(src)) {
           return provider;
@@ -83,6 +86,7 @@ const clangServices = new WeakSet();
 
 // eslint-disable-next-line rulesdir/no-commonjs
 module.exports = {
+  getClangRequestSettings,
   registerClangProvider(provider) {
     clangProviders.add(provider);
     return new _atom.Disposable(() => clangProviders.delete(provider));

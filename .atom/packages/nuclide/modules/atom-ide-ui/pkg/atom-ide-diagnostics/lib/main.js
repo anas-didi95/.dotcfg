@@ -58,6 +58,18 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
+/**
+ * Copyright (c) 2017-present, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. An additional grant
+ * of patent rights can be found in the PATENTS file in the same directory.
+ *
+ * 
+ * @format
+ */
+
 class Activation {
 
   constructor() {
@@ -96,6 +108,20 @@ class Activation {
     };
   }
 
+  consumeBusySignal(service) {
+    this._busySignalService = service;
+    return new (_UniversalDisposable || _load_UniversalDisposable()).default(() => {
+      this._busySignalService = null;
+    });
+  }
+
+  _reportBusy(title) {
+    if (this._busySignalService != null) {
+      return this._busySignalService.reportBusy(title);
+    }
+    return new (_UniversalDisposable || _load_UniversalDisposable()).default();
+  }
+
   consumeCodeActionFetcher(fetcher) {
     this._store.dispatch((_Actions || _load_Actions()).setCodeActionFetcher(fetcher));
     return new (_UniversalDisposable || _load_UniversalDisposable()).default(() => {
@@ -107,10 +133,14 @@ class Activation {
     });
   }
 
-  consumeLinterProvider(provider) {
-    const newAdapters = (0, (_LinterAdapterFactory || _load_LinterAdapterFactory()).createAdapters)(provider);
+  consumeLinterProvider(providers_) {
+    const providers = Array.isArray(providers_) ? providers_ : [providers_];
     const adapterDisposables = new (_UniversalDisposable || _load_UniversalDisposable()).default();
-    for (const adapter of newAdapters) {
+    for (const provider of providers) {
+      const adapter = (0, (_LinterAdapterFactory || _load_LinterAdapterFactory()).createAdapter)(provider, title => this._reportBusy(title));
+      if (adapter == null) {
+        continue;
+      }
       this._allLinterAdapters.add(adapter);
       const diagnosticDisposable = this.consumeDiagnosticsProviderV2({
         updates: adapter.getUpdates(),
@@ -140,16 +170,6 @@ class Activation {
       this._store.dispatch((_Actions || _load_Actions()).removeProvider(provider));
     });
   }
-} /**
-   * Copyright (c) 2017-present, Facebook, Inc.
-   * All rights reserved.
-   *
-   * This source code is licensed under the BSD-style license found in the
-   * LICENSE file in the root directory of this source tree. An additional grant
-   * of patent rights can be found in the PATENTS file in the same directory.
-   *
-   * 
-   * @format
-   */
+}
 
 (0, (_createPackage || _load_createPackage()).default)(module.exports, Activation);

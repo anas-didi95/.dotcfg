@@ -5,6 +5,26 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.HgRepositoryClient = undefined;
 
+var _asyncToGenerator = _interopRequireDefault(require('async-to-generator'));
+
+var _nuclideUri;
+
+function _load_nuclideUri() {
+  return _nuclideUri = _interopRequireDefault(require('nuclide-commons/nuclideUri'));
+}
+
+var _promise;
+
+function _load_promise() {
+  return _promise = require('nuclide-commons/promise');
+}
+
+var _string;
+
+function _load_string() {
+  return _string = require('nuclide-commons/string');
+}
+
 var _hgDiffOutputParser;
 
 function _load_hgDiffOutputParser() {
@@ -168,7 +188,8 @@ class HgRepositoryClient {
 
     this._emitter = new _atom.Emitter();
     this._subscriptions = new (_UniversalDisposable || _load_UniversalDisposable()).default(this._emitter, this._service);
-
+    this._isFetchingPathStatuses = new _rxjsBundlesRxMinJs.Subject();
+    this._manualStatusRefreshRequests = new _rxjsBundlesRxMinJs.Subject();
     this._hgStatusCache = new Map();
     this._bookmarks = new _rxjsBundlesRxMinJs.BehaviorSubject({ isLoading: true, bookmarks: [] });
 
@@ -215,7 +236,7 @@ class HgRepositoryClient {
     });
     // Get updates that tell the HgRepositoryClient when to clear its caches.
     const fileChanges = this._service.observeFilesDidChange().refCount();
-    const repoStateChanges = this._service.observeHgRepoStateDidChange().refCount();
+    const repoStateChanges = _rxjsBundlesRxMinJs.Observable.merge(this._service.observeHgRepoStateDidChange().refCount(), this._manualStatusRefreshRequests);
     const activeBookmarkChanges = this._service.observeActiveBookmarkDidChange().refCount();
     const allBookmarkChanges = this._service.observeBookmarksDidChange().refCount();
     const conflictStateChanges = this._service.observeHgConflictStateDidChange().refCount();
@@ -232,9 +253,9 @@ class HgRepositoryClient {
       this._emitter.emit('did-change-statuses');
     });
 
-    const shouldRevisionsUpdate = _rxjsBundlesRxMinJs.Observable.merge(this._bookmarks.asObservable(), commitChanges, repoStateChanges).debounceTime(REVISION_DEBOUNCE_DELAY);
+    const shouldRevisionsUpdate = _rxjsBundlesRxMinJs.Observable.merge(this._bookmarks.asObservable(), commitChanges, repoStateChanges).let((0, (_observable || _load_observable()).fastDebounce)(REVISION_DEBOUNCE_DELAY));
 
-    const bookmarksUpdates = _rxjsBundlesRxMinJs.Observable.merge(activeBookmarkChanges, allBookmarkChanges).startWith(null).debounceTime(BOOKMARKS_DEBOUNCE_DELAY).switchMap(() => _rxjsBundlesRxMinJs.Observable.defer(() => {
+    const bookmarksUpdates = _rxjsBundlesRxMinJs.Observable.merge(activeBookmarkChanges, allBookmarkChanges).startWith(null).let((0, (_observable || _load_observable()).fastDebounce)(BOOKMARKS_DEBOUNCE_DELAY)).switchMap(() => _rxjsBundlesRxMinJs.Observable.defer(() => {
       return this._service.fetchBookmarks().refCount().timeout(FETCH_BOOKMARKS_TIMEOUT);
     }).retry(2).catch(error => {
       (0, (_log4js || _load_log4js()).getLogger)('nuclide-hg-repository-client').error('failed to fetch bookmarks info:', error);
@@ -249,17 +270,37 @@ class HgRepositoryClient {
   } // legacy, only for uncommitted
 
 
+  getAdditionalLogFiles(deadline) {
+    var _this = this;
+
+    return (0, _asyncToGenerator.default)(function* () {
+      const path = _this._workingDirectory.getPath();
+      const prefix = (_nuclideUri || _load_nuclideUri()).default.isRemote(path) ? `${(_nuclideUri || _load_nuclideUri()).default.getHostname(path)}:` : '';
+      const results = yield (0, (_promise || _load_promise()).timeoutAfterDeadline)(deadline, _this._service.getAdditionalLogFiles(deadline - 1000)).catch(function (e) {
+        return [{ title: `${path}:hg`, data: (0, (_string || _load_string()).stringifyError)(e) }];
+      });
+      return results.map(function (log) {
+        return Object.assign({}, log, { title: prefix + log.title });
+      });
+    })();
+  }
+
   _observeStatus(fileChanges, repoStateChanges, fetchStatuses) {
-    const triggers = _rxjsBundlesRxMinJs.Observable.merge(fileChanges, repoStateChanges).debounceTime(STATUS_DEBOUNCE_DELAY_MS).share().startWith(null);
+    const triggers = _rxjsBundlesRxMinJs.Observable.merge(fileChanges, repoStateChanges).let((0, (_observable || _load_observable()).fastDebounce)(STATUS_DEBOUNCE_DELAY_MS)).share().startWith(null);
     // Share comes before startWith. That's because fileChanges/repoStateChanges
     // are already hot and can be shared fine. But we want both our subscribers,
     // statusChanges and isCalculatingChanges, to pick up their own copy of
     // startWith(null) no matter which order they subscribe.
 
-    const statusChanges = (0, (_observable || _load_observable()).cacheWhileSubscribed)(triggers.switchMap(() => fetchStatuses().refCount().catch(error => {
-      (0, (_log4js || _load_log4js()).getLogger)('nuclide-hg-repository-client').error('HgService cannot fetch statuses', error);
-      return _rxjsBundlesRxMinJs.Observable.empty();
-    })).map(uriToStatusIds => (0, (_collection || _load_collection()).mapTransform)(uriToStatusIds, (v, k) => (_hgConstants || _load_hgConstants()).StatusCodeIdToNumber[v])));
+    const statusChanges = (0, (_observable || _load_observable()).cacheWhileSubscribed)(triggers.switchMap(() => {
+      this._isFetchingPathStatuses.next(true);
+      return fetchStatuses().refCount().catch(error => {
+        (0, (_log4js || _load_log4js()).getLogger)('nuclide-hg-repository-client').error('HgService cannot fetch statuses', error);
+        return _rxjsBundlesRxMinJs.Observable.empty();
+      }).finally(() => {
+        this._isFetchingPathStatuses.next(false);
+      });
+    }).map(uriToStatusIds => (0, (_collection || _load_collection()).mapTransform)(uriToStatusIds, (v, k) => (_hgConstants || _load_hgConstants()).StatusCodeIdToNumber[v])));
 
     const isCalculatingChanges = (0, (_observable || _load_observable()).cacheWhileSubscribed)(_rxjsBundlesRxMinJs.Observable.merge(triggers.map(_ => true), statusChanges.map(_ => false)).distinctUntilChanged());
 
@@ -306,6 +347,14 @@ class HgRepositoryClient {
 
   observeRevisionChanges() {
     return this._revisionsCache.observeRevisionChanges();
+  }
+
+  observeIsFetchingRevisions() {
+    return this._revisionsCache.observeIsFetchingRevisions();
+  }
+
+  observeIsFetchingPathStatuses() {
+    return this._isFetchingPathStatuses.asObservable();
   }
 
   observeRevisionStatusesChanges() {
@@ -565,6 +614,7 @@ class HgRepositoryClient {
     for (const [filePath, status] of this._hgStatusCache) {
       pathStatuses[filePath] = status;
     }
+    // $FlowFixMe(>=0.55.0) Flow suppress
     return pathStatuses;
   }
 
@@ -761,6 +811,11 @@ class HgRepositoryClient {
 
   show(revision) {
     return this._service.show(revision).refCount();
+  }
+
+  diff(revision, options = {}) {
+    const { unified } = options;
+    return this._service.diff(String(revision), unified).refCount();
   }
 
   purge() {
@@ -974,13 +1029,13 @@ class HgRepositoryClient {
     return this._service.log(filePaths, limit);
   }
 
-  continueOperation(command) {
+  continueOperation(commandWithOptions) {
     // TODO(T17463635)
-    return this._service.continueOperation(command).refCount();
+    return this._service.continueOperation(commandWithOptions).refCount();
   }
 
-  abortOperation(command) {
-    return this._service.abortOperation(command).refCount();
+  abortOperation(commandWithOptions) {
+    return this._service.abortOperation(commandWithOptions).refCount();
   }
 
   resolveAllFiles() {
@@ -1011,6 +1066,10 @@ class HgRepositoryClient {
       });
     }
     this._emitter.emit('did-change-statuses');
+  }
+
+  requestPathStatusRefresh() {
+    this._manualStatusRefreshRequests.next();
   }
 }
 exports.HgRepositoryClient = HgRepositoryClient;

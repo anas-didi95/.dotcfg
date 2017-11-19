@@ -59,6 +59,7 @@ class LaunchUIComponent extends _react.Component {
       const launchArguments = (0, (_string || _load_string()).shellParse)(this.refs.launchArguments.getText());
       const launchEnvironmentVariables = (0, (_string || _load_string()).shellParse)(this.refs.launchEnvironmentVariables.getText());
       const launchWorkingDirectory = this.refs.launchWorkingDirectory.getText().trim();
+      const launchSourcePath = this.refs.launchSourcePath.getText().trim();
       const stdinFilePath = this.refs.stdinFilePath.getText().trim();
       const launchTarget = {
         executablePath: launchExecutable,
@@ -68,6 +69,9 @@ class LaunchUIComponent extends _react.Component {
         stdinFilePath,
         coreDump
       };
+      if (launchSourcePath != null) {
+        launchTarget.basepath = launchSourcePath;
+      }
       // Fire and forget.
       this.props.actions.launchDebugger(launchTarget);
 
@@ -77,7 +81,8 @@ class LaunchUIComponent extends _react.Component {
         launchEnvironmentVariables: this.state.launchEnvironmentVariables,
         launchWorkingDirectory: this.state.launchWorkingDirectory,
         stdinFilePath: this.state.stdinFilePath,
-        coreDump: this.state.coreDump
+        coreDump: this.state.coreDump,
+        launchSourcePath: this.state.launchSourcePath
       });
     };
 
@@ -88,7 +93,8 @@ class LaunchUIComponent extends _react.Component {
       launchEnvironmentVariables: '',
       launchWorkingDirectory: '',
       stdinFilePath: '',
-      coreDump: ''
+      coreDump: '',
+      launchSourcePath: ''
     };
   }
 
@@ -113,7 +119,8 @@ class LaunchUIComponent extends _react.Component {
         launchEnvironmentVariables: savedSettings.launchEnvironmentVariables,
         launchWorkingDirectory: savedSettings.launchWorkingDirectory,
         stdinFilePath: savedSettings.stdinFilePath,
-        coreDump: savedSettings.coreDump || ''
+        coreDump: savedSettings.coreDump || '',
+        launchSourcePath: savedSettings.launchSourcePath || ''
       });
     });
 
@@ -206,11 +213,23 @@ class LaunchUIComponent extends _react.Component {
         _react.createElement(
           'label',
           null,
+          'Source path: '
+        ),
+        _react.createElement((_AtomInput || _load_AtomInput()).AtomInput, {
+          ref: 'launchSourcePath',
+          tabIndex: '16',
+          placeholderText: 'Optional base path for sources',
+          value: this.state.launchSourcePath,
+          onDidChange: value => this.setState({ launchSourcePath: value })
+        }),
+        _react.createElement(
+          'label',
+          null,
           'Working directory: '
         ),
         _react.createElement((_AtomInput || _load_AtomInput()).AtomInput, {
           ref: 'launchWorkingDirectory',
-          tabIndex: '15',
+          tabIndex: '17',
           disabled: this.state.coreDump !== '',
           placeholderText: 'Working directory for the launched executable',
           value: this.state.launchWorkingDirectory,
@@ -223,7 +242,7 @@ class LaunchUIComponent extends _react.Component {
         ),
         _react.createElement((_AtomInput || _load_AtomInput()).AtomInput, {
           ref: 'stdinFilePath',
-          tabIndex: '16',
+          tabIndex: '18',
           disabled: this.state.coreDump !== '',
           placeholderText: 'Redirect stdin to this file',
           value: this.state.stdinFilePath,

@@ -6,12 +6,6 @@ Object.defineProperty(exports, "__esModule", {
 
 var _atom = require('atom');
 
-var _semver;
-
-function _load_semver() {
-  return _semver = _interopRequireDefault(require('semver'));
-}
-
 var _rxjsBundlesRxMinJs = require('rxjs/bundles/Rx.min.js');
 
 var _event;
@@ -71,19 +65,17 @@ function _load_log4js() {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 // Save events are critical, so don't allow providers to block them.
-/**
- * Copyright (c) 2017-present, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * 
- * @format
- */
-
-const SAVE_TIMEOUT = 2500;
+const SAVE_TIMEOUT = 2500; /**
+                            * Copyright (c) 2017-present, Facebook, Inc.
+                            * All rights reserved.
+                            *
+                            * This source code is licensed under the BSD-style license found in the
+                            * LICENSE file in the root directory of this source tree. An additional grant
+                            * of patent rights can be found in the PATENTS file in the same directory.
+                            *
+                            * 
+                            * @format
+                            */
 
 class CodeFormatManager {
 
@@ -116,29 +108,16 @@ class CodeFormatManager {
 
     return _rxjsBundlesRxMinJs.Observable.merge(commandEvents, editorEvents)
     // Group events by buffer to prevent simultaneous formatting operations.
-    .groupBy(event => event.editor.getBuffer(), event => event, grouped =>
-    // $FlowFixMe: add durationSelector to groupBy
-    (0, (_event || _load_event()).observableFromSubscribeFunction)(callback =>
-    // $FlowFixMe: add key to GroupedObservable
-    grouped.key.onDidDestroy(callback))).mergeMap(events =>
-    // Concatenate a null event to ensure that buffer destruction
-    // interrupts any pending format operations.
-    events.concat(_rxjsBundlesRxMinJs.Observable.of(null)).switchMap(event => {
-      if (event == null) {
-        return _rxjsBundlesRxMinJs.Observable.empty();
-      }
-      return this._handleEvent(event);
-    })).subscribe();
+    .groupBy(event => event.editor.getBuffer(), event => event, grouped => (0, (_event || _load_event()).observableFromSubscribeFunction)(callback => grouped.key.onDidDestroy(callback))).mergeMap(events =>
+    // Make sure we halt everything when the editor gets destroyed.
+    events.let((0, (_observable || _load_observable()).completingSwitchMap)(event => this._handleEvent(event)))).subscribe();
   }
 
   /**
    * Returns a stream of all typing and saving operations from the editor.
    */
   _getEditorEventStream(editor) {
-    const changeEvents = (0, (_event || _load_event()).observableFromSubscribeFunction)(callback => editor.getBuffer().onDidChange(callback))
-    // Debounce to ensure that multiple cursors only trigger one format.
-    // TODO(hansonw): Use onDidChangeText with 1.17+.
-    .debounceTime(0);
+    const changeEvents = (0, (_event || _load_event()).observableFromSubscribeFunction)(callback => editor.getBuffer().onDidChangeText(callback));
 
     const saveEvents = _rxjsBundlesRxMinJs.Observable.create(observer => {
       const realSave = editor.save;
@@ -150,15 +129,8 @@ class CodeFormatManager {
       // it's a poor user experience (and also races the text buffer's reload).
       const editor_ = editor;
       editor_.save = () => {
-        // TODO(19829039): remove check
-        if ((_semver || _load_semver()).default.gte(atom.getVersion(), '1.19.0-beta0')) {
-          // In 1.19, TextEditor.save() is async (and the promise is used).
-          // We can just directly format + save here.
-          newSaves.next('new-save');
-          return this._safeFormatCodeOnSave(editor).takeUntil(newSaves).toPromise().then(() => realSave.call(editor));
-        } else {
-          observer.next('save');
-        }
+        newSaves.next('new-save');
+        return this._safeFormatCodeOnSave(editor).takeUntil(newSaves).toPromise().then(() => realSave.call(editor));
       };
       const subscription = newSaves.subscribe(observer);
       return () => {
@@ -228,7 +200,7 @@ class CodeFormatManager {
         // If no selection is done, then, the whole file is wanted to be formatted.
         formatRange = buffer.getRange();
       } else {
-        // Format selections should start at the begining of the line,
+        // Format selections should start at the beginning of the line,
         // and include the last selected line end.
         // (If the user has already selected complete rows, then depending on how they
         // did it, their caret might be either (1) at the end of their last selected line
@@ -270,8 +242,13 @@ class CodeFormatManager {
     });
   }
 
-  _formatCodeOnTypeInTextEditor(editor, event) {
+  _formatCodeOnTypeInTextEditor(editor, aggregatedEvent) {
     return _rxjsBundlesRxMinJs.Observable.defer(() => {
+      // Don't try to format changes with multiple cursors.
+      if (aggregatedEvent.changes.length !== 1) {
+        return _rxjsBundlesRxMinJs.Observable.empty();
+      }
+      const event = aggregatedEvent.changes[0];
       // This also ensures the non-emptiness of event.newText for below.
       if (!shouldFormatOnType(event) || !(0, (_config || _load_config()).getFormatOnType)()) {
         return _rxjsBundlesRxMinJs.Observable.empty();

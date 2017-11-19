@@ -7,7 +7,8 @@ function inferType(value) {
   if (typeof value === "string") return "string"
 }
 
-const DEPRECATED_PARAMS = ["showCursorInVisualMode"]
+const DEPRECATED_PARAMS = []
+const FORCE_DELETE_PARAMS = ["showCursorInVisualMode", "notifiedCoffeeScriptNoLongerSupportedToExtendVMP"]
 
 function invertValue(value) {
   return !value
@@ -19,6 +20,11 @@ const RENAMED_PARAMS = [
   {oldName: "keepColumnOnSelectTextObject", newName: "stayOnSelectTextObject"},
   {oldName: "moveToFirstCharacterOnVerticalMotion", newName: "stayOnVerticalMotion", setValueBy: invertValue},
   {oldName: "keymapSemicolonToConfirmFind", newName: "keymapSemicolonToConfirmOnFindInput"},
+  {
+    oldName: "dontUpdateRegisterOnChangeOrSubstitute",
+    newName: "blackholeRegisteredOperators",
+    setValueBy: enabled => (enabled ? ["change*", "substitute*"] : undefined),
+  },
 ]
 
 class Settings {
@@ -44,6 +50,12 @@ class Settings {
         },
       ],
     })
+  }
+
+  silentlyRemoveUnusedParams() {
+    for (const param of FORCE_DELETE_PARAMS) {
+      this.delete(param)
+    }
   }
 
   migrateRenamedParams() {
@@ -96,7 +108,7 @@ class Settings {
   }
 
   delete(param) {
-    return this.set(param, undefined)
+    return atom.config.unset(`${this.scope}.${param}`)
   }
 
   get(param) {
@@ -115,11 +127,20 @@ class Settings {
     return atom.config.observe(`${this.scope}.${param}`, fn)
   }
 
+  onDidChange(param, fn) {
+    return atom.config.onDidChange(`${this.scope}.${param}`, fn)
+  }
+
   observeConditionalKeymaps() {
     const conditionalKeymaps = {
       keymapYToYankToLastCharacterOfLine: {
-        "atom-text-editor.vim-mode-plus:not(.insert-mode)": {
+        "atom-text-editor.vim-mode-plus.normal-mode": {
           Y: "vim-mode-plus:yank-to-last-character-of-line",
+        },
+      },
+      keymapSToSelect: {
+        "atom-text-editor.vim-mode-plus:not(.insert-mode)": {
+          s: "vim-mode-plus:select",
         },
       },
       keymapUnderscoreToReplaceWithRegister: {
@@ -200,6 +221,12 @@ module.exports = new Settings("vim-mode-plus", {
     description:
       "[Can]: `Y` behave as `y $` instead of default `y y`, This make `Y` consistent with `C`(works as `c $`) and `D`(works as `d $`).",
   },
+  keymapSToSelect: {
+    title: "keymap `s` to `select`",
+    default: false,
+    description:
+      "[Can]: `s p` to select paragraph, `s o p` to select occurrence in paragraph.<br>[Conflicts]: `s`(`substitute`). Use `c l` or `x i` instead",
+  },
   keymapUnderscoreToReplaceWithRegister: {
     title: "keymap `_` to `replace-with-register`",
     default: false,
@@ -210,13 +237,13 @@ module.exports = new Settings("vim-mode-plus", {
     title: "keymap `p` and `P` to `put-after-with-auto-indent` and `put-before-with-auto-indent`",
     default: false,
     description:
-      "Remap `p` and `P` to auto indent version.<br>\n`p` remapped to `put-after-with-auto-indent` from original `put-after`<br>\n`P` remapped to `put-before-with-auto-indent` from original `put-before`<br>\n[Conflicts]: Original `put-after` and `put-before` become unavailable unless you set different keymap by yourself.",
+      "Remap `p` and `P` to auto indent version.<br>`p` remapped to `put-after-with-auto-indent` from original `put-after`<br>`P` remapped to `put-before-with-auto-indent` from original `put-before`<br>[Conflicts]: Original `put-after` and `put-before` become unavailable unless you set different keymap by yourself.",
   },
   keymapCCToChangeInnerSmartWord: {
     title: "keymap `c c` to `change inner-smart-word`",
     default: false,
     description:
-      "[Can]: `c c` to `change inner-smart-word`<br>\n[Conflicts]: `c c`( change-current-line ), but you still can use `S` or `c i l` which is equivalent to original `c c`.",
+      "[Can]: `c c` to `change inner-smart-word`<br>[Conflicts]: `c c`( change-current-line ), but you still can use `S` or `c i l` which is equivalent to original `c c`.",
   },
   keymapSemicolonToInnerAnyPairInOperatorPendingMode: {
     title: "keymap `;` to `inner-any-pair` in `operator-pending-mode`",
@@ -261,14 +288,15 @@ module.exports = new Settings("vim-mode-plus", {
     default: "smart",
     enum: ["smart", "simple"],
     description:
-      "When you think undo/redo cursor position has BUG, set this to `simple`.<br>\n`smart`: Good accuracy but have cursor-not-updated-on-different-editor limitation<br>\n`simple`: Always work, but accuracy is not as good as `smart`.<br>",
+      "When you think undo/redo cursor position has BUG, set this to `simple`.<br>`smart`: Good accuracy but have cursor-not-updated-on-different-editor limitation<br>`simple`: Always work, but accuracy is not as good as `smart`.<br>",
   },
   groupChangesWhenLeavingInsertMode: true,
   useClipboardAsDefaultRegister: true,
-  dontUpdateRegisterOnChangeOrSubstitute: {
-    default: false,
+  blackholeRegisteredOperators: {
+    default: [],
+    items: {type: "string"},
     description:
-      "When set to `true` any `change` or `substitute` operation no longer update register content<br>\nAffects `c`, `C`, `s`, `S` operator.",
+      "Comma separated list of operator command name to disable register update.<br>e.g. `delete-right, delete-left, delete, substitute`<br>Also you can use special value(`delete*`, `change*`, `substitute*`) to specify all same-family operators.",
   },
   startInInsertMode: false,
   startInInsertModeScopes: {
@@ -286,7 +314,7 @@ module.exports = new Settings("vim-mode-plus", {
   numberRegex: {
     default: "-?[0-9]+",
     description:
-      "Used to find number in `ctrl-a` and `ctrl-x`.<br>\nTo ignore `-`( minus ) char within string like `identifier-1` use `(?:\\B-)?[0-9]+`",
+      "Used to find number in `ctrl-a` and `ctrl-x`.<br>To ignore `-`( minus ) char within string like `identifier-1` use `(?:\\B-)?[0-9]+`",
   },
   clearHighlightSearchOnResetNormalMode: {
     default: true,
@@ -300,11 +328,12 @@ module.exports = new Settings("vim-mode-plus", {
     default: [],
     items: {type: "string"},
     description:
-      "Comma separated list of character, which add space around surrounded text.<br>\nFor vim-surround compatible behavior, set `(, {, [, <`.",
+      "Comma separated list of character, which add space around surrounded text.<br>For vim-surround compatible behavior, set `(, {, [, <`.",
   },
   sequentialPaste: {
     default: false,
-    description: "When enabled `put-aftffer`(`p`), `put-before`(`P`), and `replace-with-register` pop older register entry on each sequential execution<br>The sequential execution is activated if next execution is **whithin** 1seconds(flash is not yet disappar).",
+    description:
+      "When enabled `put-after`(`p`), `put-before`(`P`), and `replace-with-register` pop older register entry on each sequential execution<br>The sequential execution is activated if next execution is **whithin** 1seconds(flash is not yet disappar).",
   },
   sequentialPasteMaxHistory: {
     default: 3,
@@ -336,11 +365,11 @@ module.exports = new Settings("vim-mode-plus", {
   reuseFindForRepeatFind: {
     default: false,
     description:
-      "When `true`, can repeat last-find by `f` and `F`( backwards ), you still can use normal `,` and `;`.<br>e.g. `f a f` move cursor to 2nd `a`.<br>Affects to: `f`, `F`, `t`, `T`.",
+      "When enabled, can repeat last-find by `f` and `F`( backwards ), you still can use normal `,` and `;`.<br>e.g. `f a f` move cursor to 2nd `a`.<br>Affects to: `f`, `F`, `t`, `T`.",
   },
   findAcrossLines: {
     default: false,
-    description: "When `true`, `f` searches over next lines.<br>Affects `f`, `F`, `t`, `T`.",
+    description: "When enabled, `f` searches over next lines.<br>Affects `f`, `F`, `t`, `T`.",
   },
   ignoreCaseForSearch: {
     default: false,
@@ -385,7 +414,7 @@ module.exports = new Settings("vim-mode-plus", {
   stayOnOccurrence: {
     default: true,
     description:
-      "Don't move cursor when operator works on occurrences( when `true`, override operator specific `stayOn` options )",
+      "Don't move cursor when operator works on occurrences<br>When enabled, override operator specific `stayOn` options.",
   },
   stayOnSelectTextObject: {
     default: true,
@@ -395,7 +424,7 @@ module.exports = new Settings("vim-mode-plus", {
   stayOnVerticalMotion: {
     default: true,
     description:
-      "Almost equivalent to `startofline` pure-Vim option(but it's meaning is **inverted**). When false, move cursor to first char.<br>\nAffects to `ctrl-f`, `ctrl-b`, `ctrl-d`, `ctrl-u`, `G`, `H`, `M`, `L`, `g g`<br>\nUnlike pure-Vim, `d`, `<<`, `>>` are not affected by this option, use independent `stayOn` options.",
+      "Almost equivalent to `startofline` pure-Vim option(but it's meaning is **inverted**). When false, move cursor to first char.<br>Affects to `ctrl-f`, `ctrl-b`, `ctrl-d`, `ctrl-u`, `G`, `H`, `M`, `L`, `g g`<br>Unlike pure-Vim, `d`, `<<`, `>>` are not affected by this option, use independent `stayOn` options.",
   },
   allowMoveToOffScreenColumnOnScreenLineMotion: {
     default: true,
@@ -406,7 +435,7 @@ module.exports = new Settings("vim-mode-plus", {
   flashOnMoveToOccurrence: {
     default: true,
     description:
-      "When preset-occurrence( `g o` ) is exist on editor, you can move between occurrences by `tab` and `shift-tab`<br>When set to `true`, flash occurrence under cursor after move",
+      "When preset-occurrence( `g o` ) is exist on editor, you can move between occurrences by `tab` and `shift-tab`<br>When enabled, flash occurrence under cursor after move",
   },
   flashOnOperate: true,
   flashOnOperateBlacklist: {
@@ -436,7 +465,7 @@ module.exports = new Settings("vim-mode-plus", {
   centerPaneOnMaximizePane: {
     default: true,
     description:
-      "Set to `false`, if you never need centering effect.<br>If you usually want centering but **occasionally** don't, leave this setting to `true` and use `vim-mode-plus:maximize-pane`( `cmd-enter` or `ctrl-w z` ) and `vim-mode-plus:maximize-pane-without-center`( `ctrl-w Z` ) command respectively.",
+      "Set to `false`, if you never need centering effect.<br>If you usually want centering but **occasionally** don't, leave this enabled and use `vim-mode-plus:maximize-pane`( `cmd-enter` or `ctrl-w z` ) and `vim-mode-plus:maximize-pane-without-center`( `ctrl-w Z` ) command respectively.",
   },
   smoothScrollOnFullScrollMotion: {
     default: false,
@@ -454,9 +483,38 @@ module.exports = new Settings("vim-mode-plus", {
     default: 500,
     description: "Smooth scroll duration( msec ) for `ctrl-d` and `ctrl-u`",
   },
+  smoothScrollOnRedrawCursorLine: {
+    default: false,
+    description: "For `z t`, `z enter`, `z u`, `z space`, `z z`, `z .`, `z b`, `z - `",
+  },
+  smoothScrollOnRedrawCursorLineDuration: {
+    default: 300,
+    description: "Smooth scroll duration( msec ) for `z` beginning `redraw-cursor-line` command familiy",
+  },
+  smoothScrollOnMiniScroll: {
+    default: false,
+    description: "For `ctrl-e` and `ctrl-y`",
+  },
+  smoothScrollOnMiniScrollDuration: {
+    default: 200,
+    description: "Smooth scroll duration( msec ) for `ctrl-e` and `ctrl-y`",
+  },
+  defaultScrollRowsOnMiniScroll: {
+    default: 1,
+    description: "Default amount of screen rows used in `ctrl-e` and `ctrl-y`",
+  },
   statusBarModeStringStyle: {
     default: "short",
     enum: ["short", "long"],
+  },
+  confirmThresholdOnOccurrenceOperation: {
+    default: 2000,
+    description:
+      "When attempt to create occurrence-marker exceeding this threshold, vmp asks confirmation to continue<br>This is to prevent editor from freezing while creating tons of markers.<br>Affects: `g o` or `o` modifier(e.g. `c o p`)",
+  },
+  notifiedCoffeeScriptNoLongerSupportedToExtendVMP: {
+    // TODO: Remove in future:(added at v1.19.0 release).
+    default: false,
   },
   debug: {
     default: false,

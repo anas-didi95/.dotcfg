@@ -26,6 +26,12 @@ function _load_range2() {
   return _range2 = require('nuclide-commons/range');
 }
 
+var _UniversalDisposable;
+
+function _load_UniversalDisposable() {
+  return _UniversalDisposable = _interopRequireDefault(require('nuclide-commons/UniversalDisposable'));
+}
+
 var _showTriggerConflictWarning;
 
 function _load_showTriggerConflictWarning() {
@@ -40,21 +46,21 @@ function _load_log4js() {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-/**
- * Copyright (c) 2017-present, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * 
- * @format
- */
+const WARN_ABOUT_TRIGGER_CONFLICT_KEY = 'hyperclick.warnAboutTriggerConflict'; /**
+                                                                                * Copyright (c) 2017-present, Facebook, Inc.
+                                                                                * All rights reserved.
+                                                                                *
+                                                                                * This source code is licensed under the BSD-style license found in the
+                                                                                * LICENSE file in the root directory of this source tree. An additional grant
+                                                                                * of patent rights can be found in the PATENTS file in the same directory.
+                                                                                *
+                                                                                * 
+                                                                                * @format
+                                                                                */
 
 /* global localStorage */
 
-const WARN_ABOUT_TRIGGER_CONFLICT_KEY = 'hyperclick.warnAboutTriggerConflict';
+const LOADING_DELAY = 250;
 
 /**
  * Construct this object to enable Hyperclick in a text editor.
@@ -78,7 +84,7 @@ class HyperclickForTextEditor {
     this._navigationMarkers = null;
 
     this._lastWordRange = null;
-    this._subscriptions = new _atom.CompositeDisposable();
+    this._subscriptions = new (_UniversalDisposable || _load_UniversalDisposable()).default();
 
     this._onMouseMove = this._onMouseMove.bind(this);
     this._onMouseDown = this._onMouseDown.bind(this);
@@ -96,7 +102,6 @@ class HyperclickForTextEditor {
     }));
 
     this._isDestroyed = false;
-    this._isLoading = false;
 
     this._subscriptions.add((_featureConfig || _load_featureConfig()).default.observe(process.platform === 'darwin' ? 'hyperclick.darwinTriggerKeys' : process.platform === 'win32' ? 'hyperclick.win32TriggerKeys' : 'hyperclick.linuxTriggerKeys', newValue_ => {
       const newValue = newValue_;
@@ -106,19 +111,6 @@ class HyperclickForTextEditor {
   }
 
   _setupMouseListeners() {
-    const getLinesDomNode = () => {
-      const { component } = this._textEditorView;
-
-      if (!component) {
-        throw new Error('Invariant violation: "component"');
-      }
-
-      if (component.refs != null) {
-        return component.refs.lineTiles;
-      } else {
-        return component.linesComponent.getDomNode();
-      }
-    };
     const addMouseListeners = () => {
       const { component } = this._textEditorView;
 
@@ -126,7 +118,7 @@ class HyperclickForTextEditor {
         throw new Error('Invariant violation: "component"');
       }
 
-      const linesDomNode = getLinesDomNode();
+      const linesDomNode = component.refs.lineTiles;
       if (linesDomNode == null) {
         return;
       }
@@ -171,10 +163,6 @@ class HyperclickForTextEditor {
 
   _onMouseMove(event) {
     const mouseEvent = event;
-    if (this._isLoading) {
-      // Show the loading cursor.
-      this._textEditorView.classList.add('hyperclick-loading');
-    }
 
     // We save the last `MouseEvent` so the user can trigger Hyperclick by
     // pressing the key without moving the mouse again. We only save the
@@ -274,11 +262,6 @@ class HyperclickForTextEditor {
 
       if (_this._lastSuggestionAtMouse != null) {
         const { range } = _this._lastSuggestionAtMouse;
-
-        if (!range) {
-          throw new Error('Hyperclick result must have a valid Range');
-        }
-
         if ((0, (_range2 || _load_range2()).isPositionInRange)(position, range)) {
           return;
         }
@@ -289,12 +272,18 @@ class HyperclickForTextEditor {
       // last suggestion, then refetch hyperclick suggestions. Otherwise,
       // we might be able to reuse it below.
       if (!_this._lastPosition || !_this._lastSuggestionAtMousePromise || position.compare(_this._lastPosition) !== 0) {
-        _this._isLoading = true;
+        _this._setLoading();
         _this._lastPosition = position;
 
         try {
           _this._lastSuggestionAtMousePromise = _this._hyperclick.getSuggestion(_this._textEditor, position);
-          _this._lastSuggestionAtMouse = yield _this._lastSuggestionAtMousePromise;
+          const promise = _this._lastSuggestionAtMousePromise;
+          const result = yield promise;
+          // Avoid race conditions where we start fetching for a different location.
+          if (_this._lastSuggestionAtMousePromise !== promise) {
+            return;
+          }
+          _this._lastSuggestionAtMouse = result;
         } catch (e) {
           (0, (_log4js || _load_log4js()).getLogger)('hyperclick').error('Error getting Hyperclick suggestion:', e);
         } finally {
@@ -348,11 +337,6 @@ class HyperclickForTextEditor {
       return false;
     }
     const { range } = this._lastSuggestionAtMouse;
-
-    if (!range) {
-      throw new Error('Hyperclick result must have a valid Range');
-    }
-
     return (0, (_range2 || _load_range2()).isPositionInRange)(this._getMousePositionAsBufferPosition(), range);
   }
 
@@ -418,8 +402,20 @@ class HyperclickForTextEditor {
     return event.shiftKey === this._triggerKeys.has('shiftKey') && event.ctrlKey === this._triggerKeys.has('ctrlKey') && event.altKey === this._triggerKeys.has('altKey') && event.metaKey === this._triggerKeys.has('metaKey');
   }
 
+  _setLoading() {
+    this._doneLoading();
+    this._loadingTimer = setTimeout(() => {
+      // Show the loading cursor.
+      this._textEditorView.classList.add('hyperclick-loading');
+      this._loadingTimer = null;
+    }, LOADING_DELAY);
+  }
+
   _doneLoading() {
-    this._isLoading = false;
+    if (this._loadingTimer != null) {
+      clearTimeout(this._loadingTimer);
+      this._loadingTimer = null;
+    }
     this._textEditorView.classList.remove('hyperclick-loading');
   }
 

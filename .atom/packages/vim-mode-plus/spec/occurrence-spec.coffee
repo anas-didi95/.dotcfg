@@ -2,7 +2,7 @@
 settings = require '../lib/settings'
 
 describe "Occurrence", ->
-  [set, ensure, keystroke, editor, editorElement, vimState, classList] = []
+  [set, ensure, ensureWait, editor, editorElement, vimState, classList] = []
   [searchEditor, searchEditorElement] = []
   inputSearchText = (text) ->
     searchEditor.insertText(text)
@@ -13,7 +13,7 @@ describe "Occurrence", ->
     getVimState (state, vim) ->
       vimState = state
       {editor, editorElement} = vimState
-      {set, ensure, keystroke} = vim
+      {set, ensure, ensureWait} = vim
       classList = editorElement.classList
       searchEditor = vimState.searchInput.editor
       searchEditorElement = vimState.searchInput.editorElement
@@ -179,7 +179,7 @@ describe "Occurrence", ->
             """
         it "not clip if original cursor not intersects any occurence-marker", ->
           ensure 'g o', occurrenceText: ['ooo', 'ooo', 'ooo'], cursor: [1, 2]
-          keystroke 'j', cursor: [2, 2]
+          ensure 'j', cursor: [2, 2]
           ensure "d p",
             textC: """
 
@@ -282,7 +282,6 @@ describe "Occurrence", ->
 
           """
 
-
   describe "from visual-mode.is-narrowed", ->
     beforeEach ->
       set
@@ -361,7 +360,7 @@ describe "Occurrence", ->
 
     describe "from normal mode", ->
       it "select occurrence by pattern match", ->
-        keystroke '/'
+        ensure '/'
         inputSearchText('\\d{3,4}')
         dispatchSearchCommand('vim-mode-plus:select-occurrence-from-search')
         ensure 'i e',
@@ -369,12 +368,12 @@ describe "Occurrence", ->
           mode: ['visual', 'characterwise']
 
       it "change occurrence by pattern match", ->
-        keystroke '/'
+        ensure '/'
         inputSearchText('^\\w+:')
         dispatchSearchCommand('vim-mode-plus:change-occurrence-from-search')
         ensure 'i e', mode: 'insert'
         editor.insertText('hello')
-        ensure
+        ensure null,
           text: """
           hello xxx: ooo: 0000
           hello ooo: 22: ooo:
@@ -385,7 +384,7 @@ describe "Occurrence", ->
     describe "from visual mode", ->
       describe "visual characterwise", ->
         it "change occurrence in narrowed selection", ->
-          keystroke 'v j /'
+          ensure 'v j /'
           inputSearchText('o+')
           dispatchSearchCommand('vim-mode-plus:select-occurrence-from-search')
           ensure 'U',
@@ -398,7 +397,7 @@ describe "Occurrence", ->
 
       describe "visual linewise", ->
         it "change occurrence in narrowed selection", ->
-          keystroke 'V j /'
+          ensure 'V j /'
           inputSearchText('o+')
           dispatchSearchCommand('vim-mode-plus:select-occurrence-from-search')
           ensure 'U',
@@ -412,7 +411,7 @@ describe "Occurrence", ->
       describe "visual blockwise", ->
         it "change occurrence in narrowed selection", ->
           set cursor: [0, 5]
-          keystroke 'ctrl-v 2 j 1 0 l /'
+          ensure 'ctrl-v 2 j 1 0 l /'
           inputSearchText('o+')
           dispatchSearchCommand('vim-mode-plus:select-occurrence-from-search')
           ensure 'U',
@@ -447,7 +446,7 @@ describe "Occurrence", ->
       describe "when no selection is exists", ->
         it "select occurrence in all persistent-selection", ->
           set cursor: [0, 0]
-          keystroke '/'
+          ensure '/'
           inputSearchText('xxx')
           dispatchSearchCommand('vim-mode-plus:select-occurrence-from-search')
           ensure 'U',
@@ -462,7 +461,7 @@ describe "Occurrence", ->
       describe "when both exits, operator applied to both", ->
         it "select all occurrence in selection", ->
           set cursor: [0, 0]
-          keystroke 'V 2 j /'
+          ensure 'V 2 j /'
           inputSearchText('xxx')
           dispatchSearchCommand('vim-mode-plus:select-occurrence-from-search')
           ensure 'U',
@@ -516,11 +515,12 @@ describe "Occurrence", ->
         ensure 'j f =', cursor: [1, 17]
 
         runs ->
-          keystroke [
+          _keystroke = [
             'g cmd-d' # select-occurrence
             'i f'     # inner-function-text-object
             'm'       # toggle-persistent-selection
           ].join(" ")
+          ensure(_keystroke)
 
           textsInBufferRange = vimState.persistentSelection.getMarkerBufferRanges().map (range) ->
             editor.getTextInBufferRange(range)
@@ -528,16 +528,16 @@ describe "Occurrence", ->
           expect(textsInBufferRangeIsAllEqualChar).toBe(true)
           expect(vimState.persistentSelection.getMarkers()).toHaveLength(11)
 
-          keystroke '2 l' # to move to out-side of range-mrker
+          ensure '2 l' # to move to out-side of range-mrker
           ensure '/ => enter', cursor: [9, 69]
-          keystroke "m" # clear persistentSelection at cursor which is = sign part of fat arrow.
+          ensure "m" # clear persistentSelection at cursor which is = sign part of fat arrow.
           expect(vimState.persistentSelection.getMarkers()).toHaveLength(10)
 
         waitsFor ->
           classList.contains('has-persistent-selection')
 
         runs ->
-          keystroke "ctrl-cmd-g I" # "select-persistent-selection" then "Insert at start of selection"
+          ensure "ctrl-cmd-g I" # "select-persistent-selection" then "Insert at start of selection"
 
           editor.insertText('?')
           ensure 'escape',
@@ -663,7 +663,7 @@ describe "Occurrence", ->
                 markerLayerUpdated
 
               runs ->
-                ensure occurrenceCount: 0
+                ensure null, occurrenceCount: 0
                 expect(classList.contains('has-occurrence')).toBe(false)
 
       describe "in visual-mode", ->
@@ -687,7 +687,7 @@ describe "Occurrence", ->
               mode: ['visual', 'linewise']
               selectedText: textOriginal
               occurrenceText: ['text', 'text', 'text', 'text', 'text', 'text']
-            ensure 'r !',
+            ensureWait 'r !',
               mode: 'normal'
               text: """
               This !!!! have 3 instance of '!!!!' in the whole !!!!
@@ -700,10 +700,10 @@ describe "Occurrence", ->
 
         describe "add-occurrence-pattern-from-search", ->
           it 'mark as occurrence which matches regex entered in search-ui', ->
-            keystroke '/'
+            ensure '/'
             inputSearchText('\\bt\\w+')
             dispatchSearchCommand('vim-mode-plus:add-occurrence-pattern-from-search')
-            ensure
+            ensure null,
               occurrenceText: ['text', 'text', 'the', 'text']
 
     describe "mutate preset occurrence", ->
@@ -1041,3 +1041,147 @@ describe "Occurrence", ->
       describe "add preset subword-occurrence", ->
         it "mark subword under cursor", ->
           ensure 'g O', occurrenceText: ['Case', 'Case', 'Case', 'Case']
+
+  describe "linewise-bound-operation in occurrence operation", ->
+    beforeEach ->
+      waitsForPromise ->
+        atom.packages.activatePackage("language-javascript")
+
+      runs ->
+        set
+          grammar: 'source.js'
+          textC: """
+          function hello(name) {
+            console.log("debug-1")
+            |console.log("debug-2")
+
+            const greeting = "hello"
+            console.log("debug-3")
+
+            console.log("debug-4, includ `console` word")
+            returrn name + " " + greeting
+          }
+          """
+
+    describe "with preset-occurrence", ->
+      it "works characterwise for `delete` operator", ->
+        ensure "g o v i f", mode: ['visual', 'linewise']
+        ensure "d",
+          textC: """
+          function hello(name) {
+            |.log("debug-1")
+            .log("debug-2")
+
+            const greeting = "hello"
+            .log("debug-3")
+
+            .log("debug-4, includ `` word")
+            returrn name + " " + greeting
+          }
+          """
+      it "works linewise for `delete-line` operator", ->
+        ensure "g o v i f D",
+          textC: """
+          function hello(name) {
+          |
+            const greeting = "hello"
+
+            returrn name + " " + greeting
+          }
+          """
+    describe "when specified both o and V operator-modifier", ->
+      it "delete `console` including line by `V` modifier", ->
+        ensure "d o V f",
+          textC: """
+          function hello(name) {
+          |
+            const greeting = "hello"
+
+            returrn name + " " + greeting
+          }
+          """
+      it "upper-case `console` including line by `V` modifier", ->
+        ensure "g U o V f",
+          textC: """
+          function hello(name) {
+            CONSOLE.LOG("DEBUG-1")
+            |CONSOLE.LOG("DEBUG-2")
+
+            const greeting = "hello"
+            CONSOLE.LOG("DEBUG-3")
+
+            CONSOLE.LOG("DEBUG-4, INCLUD `CONSOLE` WORD")
+            returrn name + " " + greeting
+          }
+          """
+    describe "with o operator-modifier", ->
+      it "toggle-line-comments of `occurrence` inclding **lines**", ->
+        ensure "g / o f",
+          textC: """
+          function hello(name) {
+            // console.log("debug-1")
+            // |console.log("debug-2")
+
+            const greeting = "hello"
+            // console.log("debug-3")
+
+            // console.log("debug-4, includ `console` word")
+            returrn name + " " + greeting
+          }
+          """
+        ensure '.',
+          textC: """
+          function hello(name) {
+            console.log("debug-1")
+            |console.log("debug-2")
+
+            const greeting = "hello"
+            console.log("debug-3")
+
+            console.log("debug-4, includ `console` word")
+            returrn name + " " + greeting
+          }
+          """
+
+  describe "confirmThresholdOnOccurrenceOperation config", ->
+    beforeEach ->
+      set textC: "|oo oo oo oo oo\n"
+      spyOn(atom, 'confirm')
+
+    describe "when under threshold", ->
+      beforeEach ->
+        settings.set("confirmThresholdOnOccurrenceOperation", 100)
+
+      it "does not ask confirmation on o-modifier", ->
+        ensure "c o", mode: "operator-pending", occurrenceText: ['oo', 'oo', 'oo', 'oo', 'oo']
+        expect(atom.confirm).not.toHaveBeenCalled()
+
+      it "does not ask confirmation on `g o`", ->
+        ensure "g o", mode: "normal", occurrenceText: ['oo', 'oo', 'oo', 'oo', 'oo']
+        expect(atom.confirm).not.toHaveBeenCalled()
+
+    describe "when exceeding threshold", ->
+      beforeEach ->
+        settings.set("confirmThresholdOnOccurrenceOperation", 2)
+
+      it "ask confirmation on o-modifier", ->
+        ensure "c o", mode: "operator-pending", occurrenceText: []
+        expect(atom.confirm).toHaveBeenCalled()
+
+      it "can cancel and confirm on o-modifier", ->
+        atom.confirm.andCallFake ({buttons}) -> buttons.indexOf("Cancel")
+        ensure "c o", mode: "operator-pending", occurrenceText: []
+        ensure null, mode: "operator-pending", occurrenceText: []
+        atom.confirm.andCallFake ({buttons}) -> buttons.indexOf("Continue")
+        ensure "o", mode: "operator-pending", occurrenceText: ['oo', 'oo', 'oo', 'oo', 'oo']
+
+      it "ask confirmation on `g o`", ->
+        ensure "g o", mode: "normal", occurrenceText: []
+        expect(atom.confirm).toHaveBeenCalled()
+
+      it "can cancel and confirm on `g o`", ->
+        atom.confirm.andCallFake ({buttons}) -> buttons.indexOf("Cancel")
+        ensure "g o", mode: "normal", occurrenceText: []
+        ensure null, mode: "normal", occurrenceText: []
+        atom.confirm.andCallFake ({buttons}) -> buttons.indexOf("Continue")
+        ensure "g o", mode: "normal", occurrenceText: ['oo', 'oo', 'oo', 'oo', 'oo']

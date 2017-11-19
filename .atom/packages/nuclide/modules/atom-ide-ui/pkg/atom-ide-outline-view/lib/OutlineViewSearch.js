@@ -67,8 +67,12 @@ class OutlineViewSearchComponent extends _react.Component {
     // An element is considered visible if it is not in the Map or if it has a
     // Search result that has the visible property set to true. Therefore, all
     // elements are visible when the Map is empty.
-    this.SEARCH_PLACEHOLDER = 'Search Outline View';
+    this.SEARCH_PLACEHOLDER = 'Search Outline';
     this.DEBOUNCE_TIME = 100;
+
+    this._handleInputRef = element => {
+      this._inputRef = element;
+    };
 
     this._onConfirm = () => {
       const firstElement = this._findFirstResult(this.searchResults, this.props.outlineTrees);
@@ -82,7 +86,11 @@ class OutlineViewSearchComponent extends _react.Component {
       (_analytics || _load_analytics()).default.track('outline-view:search-enter');
       pane.activate();
       pane.activateItem(this.props.editor);
-      (0, (_goToLocation || _load_goToLocation()).goToLocationInEditor)(this.props.editor, firstElement.startPosition.row, firstElement.startPosition.column);
+      const landingPosition = firstElement.landingPosition != null ? firstElement.landingPosition : firstElement.startPosition;
+      (0, (_goToLocation || _load_goToLocation()).goToLocationInEditor)(this.props.editor, {
+        line: landingPosition.row,
+        column: landingPosition.column
+      });
       this.setState({ currentQuery: '' });
     };
 
@@ -98,6 +106,12 @@ class OutlineViewSearchComponent extends _react.Component {
     this.state = {
       currentQuery: ''
     };
+  }
+
+  focus() {
+    if (this._inputRef != null) {
+      this._inputRef.focus();
+    }
   }
 
   componentDidUpdate(prevProps, prevState) {
@@ -144,6 +158,7 @@ class OutlineViewSearchComponent extends _react.Component {
         onCancel: this._onDidClear,
         onDidChange: this._onDidChange,
         placeholderText: this.state.currentQuery || this.SEARCH_PLACEHOLDER,
+        ref: this._handleInputRef,
         value: this.state.currentQuery,
         size: 'sm'
       }),

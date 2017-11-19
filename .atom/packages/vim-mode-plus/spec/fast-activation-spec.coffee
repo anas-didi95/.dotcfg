@@ -54,22 +54,20 @@ describe "dirty work for fast package activation", ->
 
       ensureRequiredFiles = (files) ->
         should = files.map((file) -> packPath + file)
+
         # console.log "# should", should.join("\n")
         # console.log "# actual", getRequiredLibOrNodeModulePaths().join("\n")
+
         expect(getRequiredLibOrNodeModulePaths()).toEqual(should)
 
   # * To reduce IO and compile-evaluation of js file on startup
   describe "requrie as minimum num of file as possible on startup", ->
     shouldRequireFilesInOrdered = [
       "lib/main.js"
-      "lib/base.coffee"
-      "node_modules/delegato/lib/delegator.js"
-      "node_modules/mixto/lib/mixin.js"
+      "lib/base.js"
       "lib/settings.js"
-      "lib/global-state.js"
       "lib/vim-state.js"
-      "lib/mode-manager.js"
-      "lib/command-table.coffee"
+      "lib/command-table.json"
     ]
     if atom.inDevMode()
       shouldRequireFilesInOrdered.push('lib/developer.js')
@@ -105,12 +103,11 @@ describe "dirty work for fast package activation", ->
           extraShouldRequireFilesInOrdered = [
             "lib/status-bar-manager.js"
             "lib/operation-stack.js"
-            "lib/selection-wrapper.js"
-            "lib/utils.js"
+            "lib/file-table.json"
+            "lib/motion.js"
             "node_modules/underscore-plus/lib/underscore-plus.js"
             "node_modules/underscore/underscore.js"
-            "lib/blockwise-selection.js"
-            "lib/motion.coffee"
+            "lib/utils.js"
             "lib/cursor-style-manager.js"
           ]
           files = shouldRequireFilesInOrdered.concat(extraShouldRequireFilesInOrdered)
@@ -124,37 +121,29 @@ describe "dirty work for fast package activation", ->
     #  So calcluate non-dynamic par then save to command-table.coffe and load in on startup.
     #  When command are executed, necessary command class file is lazy-required.
     describe "initial classRegistry", ->
-      it "contains one entry and it's Base class", ->
+      it "is empty", ->
         withCleanActivation (pack) ->
           Base = pack.mainModule.provideVimModePlus().Base
-          classRegistry = Base.getClassRegistry()
-          keys = Object.keys(classRegistry)
-          expect(keys).toHaveLength(1)
-          expect(keys[0]).toBe("Base")
-          expect(classRegistry[keys[0]]).toBe(Base)
+          expect(Object.keys(Base.classTable)).toHaveLength(0)
 
     describe "fully populated classRegistry", ->
-      it "generateCommandTableByEagerLoad populate all registry eagerly", ->
+      it "buildCommandTable populate all class table eagerly", ->
         withCleanActivation (pack) ->
           Base = pack.mainModule.provideVimModePlus().Base
-          oldRegistries = Base.getClassRegistry()
-          oldRegistriesLength = Object.keys(oldRegistries).length
-          expect(Object.keys(oldRegistries)).toHaveLength(1)
+          expect(Object.keys(Base.classTable)).toHaveLength(0)
+          Base.buildCommandTableAndFileTable()
+          expect(Object.keys(Base.classTable).length).toBeGreaterThan(0)
 
-          Base.generateCommandTableByEagerLoad()
-          newRegistriesLength = Object.keys(Base.getClassRegistry()).length
-          expect(newRegistriesLength).toBeGreaterThan(oldRegistriesLength)
-
-    describe "make sure cmd-table is NOT out-of-date", ->
-      it "generateCommandTableByEagerLoad return table which is equals to initially loaded command table", ->
+    describe "make sure command-table and file-table is NOT out-of-date", ->
+      it "buildCommandTable return table which is equals to initially loaded command table", ->
         withCleanActivation (pack) ->
           Base = pack.mainModule.provideVimModePlus().Base
-          [oldCommandTable, newCommandTable] = []
+          oldCommandTable = require("../lib/command-table.json")
+          oldFileTable = require("../lib/file-table.json")
+          {commandTable, fileTable} = Base.buildCommandTableAndFileTable()
 
-          oldCommandTable = Base.commandTable
-          newCommandTable = Base.generateCommandTableByEagerLoad()
-          loadedCommandTable = require('../lib/command-table')
+          expect(oldCommandTable).not.toBe(commandTable)
+          expect(oldCommandTable).toEqual(commandTable)
 
-          expect(oldCommandTable).not.toBe(newCommandTable)
-          expect(loadedCommandTable).toEqual(oldCommandTable)
-          expect(loadedCommandTable).toEqual(newCommandTable)
+          expect(oldFileTable).not.toBe(fileTable)
+          expect(oldFileTable).toEqual(fileTable)

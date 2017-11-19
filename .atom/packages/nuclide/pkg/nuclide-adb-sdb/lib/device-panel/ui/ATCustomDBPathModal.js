@@ -50,13 +50,19 @@ class ATCustomDBPathModal extends _react.Component {
       this.setState({ customPath: customPath.length === 0 ? null : customPath });
     };
 
+    this._handleCopyToClipboard = () => {
+      if (this.props.activePath != null) {
+        atom.clipboard.write(this.props.activePath);
+      }
+    };
+
     this.state = { customPath: this.props.currentCustomPath };
   }
 
   _getActiveConfig() {
     return _react.createElement(
       'div',
-      null,
+      { className: 'nuclide-adb-sdb-path' },
       _react.createElement(
         'label',
         null,
@@ -74,23 +80,13 @@ class ATCustomDBPathModal extends _react.Component {
           )
         )
       ),
-      _react.createElement(
-        'label',
-        null,
-        'Active ',
-        this.props.type,
-        ' port:',
-        ' ',
-        _react.createElement(
-          'i',
-          null,
-          _react.createElement(
-            'strong',
-            null,
-            // flowlint-next-line sketchy-null-number:off
-            this.props.activePort || 'default'
-          )
-        )
+      this.props.activePath == null ? null : _react.createElement(
+        (_Button || _load_Button()).Button,
+        {
+          onClick: this._handleCopyToClipboard,
+          size: 'SMALL',
+          className: 'nuclide-adb-sdb-copy-path-btn' },
+        'Copy path to clipboard'
       )
     );
   }

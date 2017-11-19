@@ -3,6 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+exports.ensureArray = ensureArray;
 exports.arrayRemove = arrayRemove;
 exports.arrayEqual = arrayEqual;
 exports.arrayCompact = arrayCompact;
@@ -24,6 +25,8 @@ exports.setFilter = setFilter;
 exports.isEmpty = isEmpty;
 exports.keyMirror = keyMirror;
 exports.collect = collect;
+exports.objectFromPairs = objectFromPairs;
+exports.objectMapValues = objectMapValues;
 exports.objectValues = objectValues;
 exports.objectEntries = objectEntries;
 exports.objectFromMap = objectFromMap;
@@ -32,11 +35,14 @@ exports.someOfIterable = someOfIterable;
 exports.findInIterable = findInIterable;
 exports.filterIterable = filterIterable;
 exports.mapIterable = mapIterable;
+exports.range = range;
 exports.firstOfIterable = firstOfIterable;
 exports.iterableIsEmpty = iterableIsEmpty;
 exports.iterableContains = iterableContains;
 exports.count = count;
 exports.isIterable = isIterable;
+exports.insideOut = insideOut;
+exports.mapFromObject = mapFromObject;
 /**
  * Copyright (c) 2017-present, Facebook, Inc.
  * All rights reserved.
@@ -49,6 +55,10 @@ exports.isIterable = isIterable;
  * @format
  */
 
+function ensureArray(x) {
+  return Array.isArray(x) ? x : [x];
+}
+
 function arrayRemove(array, element) {
   const index = array.indexOf(element);
   if (index >= 0) {
@@ -57,6 +67,9 @@ function arrayRemove(array, element) {
 }
 
 function arrayEqual(array1, array2, equalComparator) {
+  if (array1 === array2) {
+    return true;
+  }
   if (array1.length !== array2.length) {
     return false;
   }
@@ -275,6 +288,22 @@ function collect(pairs) {
   return result;
 }
 
+function objectFromPairs(iterable) {
+  const result = {};
+  for (const [key, value] of iterable) {
+    result[key] = value;
+  }
+  return result;
+}
+
+function objectMapValues(object, project) {
+  const result = {};
+  Object.keys(object).forEach(key => {
+    result[key] = project(object[key], key);
+  });
+  return result;
+}
+
 class MultiMap {
   // Invariant: no empty sets. They should be removed instead.
   constructor() {
@@ -444,6 +473,13 @@ function* mapIterable(iterable, projectorFn) {
   }
 }
 
+// Return an iterable of the numbers start (inclusive) through stop (exclusive)
+function* range(start, stop, step = 1) {
+  for (let i = start; i < stop; i += step) {
+    yield i;
+  }
+}
+
 function firstOfIterable(iterable) {
   return findInIterable(iterable, () => true);
 }
@@ -471,4 +507,29 @@ function count(iterable) {
 
 function isIterable(obj) {
   return typeof obj[Symbol.iterator] === 'function';
+}
+
+// Traverse an array from the inside out, starting at the specified index.
+function* insideOut(arr, startingIndex) {
+  if (arr.length === 0) {
+    return;
+  }
+
+  let i = startingIndex == null ? Math.floor(arr.length / 2) : Math.min(arr.length, Math.max(0, startingIndex));
+  let j = i - 1;
+
+  while (i < arr.length || j >= 0) {
+    if (i < arr.length) {
+      yield [arr[i], i];
+      i++;
+    }
+    if (j >= 0) {
+      yield [arr[j], j];
+      j--;
+    }
+  }
+}
+
+function mapFromObject(obj) {
+  return new Map(objectEntries(obj));
 }

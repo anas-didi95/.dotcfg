@@ -26,6 +26,9 @@ When initialized, the server takes an optional `initializationOptions` object:
   // diagnostics and code actions will be provided. If this is not provided or
   // is an empty array, diagnostics will be provided for all directories.
   diagnosticsWhitelist: Array<string>,
+  // A list of regexes to determine if require() will be used instead of 'import'.
+  // The default settings is to use 'import'.
+  requiresWhitelist: Array<string>,
 }
 ```
 
@@ -40,7 +43,7 @@ file with `eslint` configurations, it will be conservative and assume that all e
 See the list of globally defined identifiers for each environment [here](https://github.com/sindresorhus/globals/blob/master/globals.json).
 
 ### Flow Configuration
-Finally, the server will also read from a project's `.flowconfig` for information on how to format import files.  
+Finally, the server will also read from a project's `.flowconfig` for information on how to format import files.
 
 #### Node vs Haste
 `nuclide-js-imports-server` will use the `.flowconfig` to check for the module system used (`node` or `haste`).

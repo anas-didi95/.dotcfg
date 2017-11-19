@@ -3,14 +3,13 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.getInstalledPackages = exports.removeFile = exports.touchFile = exports.dumpsysPackage = exports.activityExists = exports.launchService = exports.launchMainActivity = exports.launchActivity = exports.removeJdwpForwardSpec = exports.forwardJdwpPortToPid = exports.getPidFromPackageName = exports.stopPackage = exports.registerCustomPath = exports.getFullConfig = exports.registerAdbPath = undefined;
+exports.getApkManifest = exports.getInstalledPackages = exports.removeFile = exports.touchFile = exports.dumpsysPackage = exports.activityExists = exports.launchService = exports.launchMainActivity = exports.launchActivity = exports.removeJdwpForwardSpec = exports.forwardJdwpPortToPid = exports.getPidFromPackageName = exports.stopProcess = exports.registerCustomPath = exports.getFullConfig = exports.registerAdbPath = undefined;
 
 var _asyncToGenerator = _interopRequireDefault(require('async-to-generator'));
 
 let registerAdbPath = exports.registerAdbPath = (() => {
   var _ref = (0, _asyncToGenerator.default)(function* (id, path, priority = -1) {
     (0, (_Store || _load_Store()).getStore)(ADB).registerPath(id, { path, priority });
-    (0, (_Store || _load_Store()).getStore)(ADB).addPort((_DebugBridge || _load_DebugBridge()).DEFAULT_ADB_PORT);
   });
 
   return function registerAdbPath(_x, _x2) {
@@ -38,12 +37,12 @@ let registerCustomPath = exports.registerCustomPath = (() => {
   };
 })();
 
-let stopPackage = exports.stopPackage = (() => {
-  var _ref4 = (0, _asyncToGenerator.default)(function* (device, packageName) {
-    return new (_Adb || _load_Adb()).Adb(device).stopPackage(packageName);
+let stopProcess = exports.stopProcess = (() => {
+  var _ref4 = (0, _asyncToGenerator.default)(function* (device, packageName, pid) {
+    return new (_Adb || _load_Adb()).Adb(device).stopProcess(packageName, pid);
   });
 
-  return function stopPackage(_x4, _x5) {
+  return function stopProcess(_x4, _x5, _x6) {
     return _ref4.apply(this, arguments);
   };
 })();
@@ -53,7 +52,7 @@ let getPidFromPackageName = exports.getPidFromPackageName = (() => {
     return new (_Processes || _load_Processes()).Processes(new (_Adb || _load_Adb()).Adb(device)).getPidFromPackageName(packageName);
   });
 
-  return function getPidFromPackageName(_x6, _x7) {
+  return function getPidFromPackageName(_x7, _x8) {
     return _ref5.apply(this, arguments);
   };
 })();
@@ -63,7 +62,7 @@ let forwardJdwpPortToPid = exports.forwardJdwpPortToPid = (() => {
     return new (_Adb || _load_Adb()).Adb(device).forwardJdwpPortToPid(tcpPort, pid);
   });
 
-  return function forwardJdwpPortToPid(_x8, _x9, _x10) {
+  return function forwardJdwpPortToPid(_x9, _x10, _x11) {
     return _ref6.apply(this, arguments);
   };
 })();
@@ -73,7 +72,7 @@ let removeJdwpForwardSpec = exports.removeJdwpForwardSpec = (() => {
     return new (_Adb || _load_Adb()).Adb(device).removeJdwpForwardSpec(spec);
   });
 
-  return function removeJdwpForwardSpec(_x11, _x12) {
+  return function removeJdwpForwardSpec(_x12, _x13) {
     return _ref7.apply(this, arguments);
   };
 })();
@@ -83,7 +82,7 @@ let launchActivity = exports.launchActivity = (() => {
     return new (_Adb || _load_Adb()).Adb(device).launchActivity(packageName, activity, debug, action, parameters);
   });
 
-  return function launchActivity(_x13, _x14, _x15, _x16, _x17, _x18) {
+  return function launchActivity(_x14, _x15, _x16, _x17, _x18, _x19) {
     return _ref8.apply(this, arguments);
   };
 })();
@@ -93,7 +92,7 @@ let launchMainActivity = exports.launchMainActivity = (() => {
     return new (_Adb || _load_Adb()).Adb(device).launchMainActivity(packageName, debug);
   });
 
-  return function launchMainActivity(_x19, _x20, _x21) {
+  return function launchMainActivity(_x20, _x21, _x22) {
     return _ref9.apply(this, arguments);
   };
 })();
@@ -103,7 +102,7 @@ let launchService = exports.launchService = (() => {
     return new (_Adb || _load_Adb()).Adb(device).launchService(packageName, serviceName, debug);
   });
 
-  return function launchService(_x22, _x23, _x24, _x25) {
+  return function launchService(_x23, _x24, _x25, _x26) {
     return _ref10.apply(this, arguments);
   };
 })();
@@ -113,7 +112,7 @@ let activityExists = exports.activityExists = (() => {
     return new (_Adb || _load_Adb()).Adb(device).activityExists(packageName, activity);
   });
 
-  return function activityExists(_x26, _x27, _x28) {
+  return function activityExists(_x27, _x28, _x29) {
     return _ref11.apply(this, arguments);
   };
 })();
@@ -123,7 +122,7 @@ let dumpsysPackage = exports.dumpsysPackage = (() => {
     return new (_Adb || _load_Adb()).Adb(device).dumpsysPackage(identifier);
   });
 
-  return function dumpsysPackage(_x29, _x30) {
+  return function dumpsysPackage(_x30, _x31) {
     return _ref12.apply(this, arguments);
   };
 })();
@@ -133,7 +132,7 @@ let touchFile = exports.touchFile = (() => {
     return new (_Adb || _load_Adb()).Adb(device).touchFile(path);
   });
 
-  return function touchFile(_x31, _x32) {
+  return function touchFile(_x32, _x33) {
     return _ref13.apply(this, arguments);
   };
 })();
@@ -143,7 +142,7 @@ let removeFile = exports.removeFile = (() => {
     return new (_Adb || _load_Adb()).Adb(device).removeFile(path);
   });
 
-  return function removeFile(_x33, _x34) {
+  return function removeFile(_x34, _x35) {
     return _ref14.apply(this, arguments);
   };
 })();
@@ -153,8 +152,40 @@ let getInstalledPackages = exports.getInstalledPackages = (() => {
     return new (_Adb || _load_Adb()).Adb(device).getInstalledPackages();
   });
 
-  return function getInstalledPackages(_x35) {
+  return function getInstalledPackages(_x36) {
     return _ref15.apply(this, arguments);
+  };
+})();
+
+let getAaptBinary = (() => {
+  var _ref16 = (0, _asyncToGenerator.default)(function* (buildToolsVersion) {
+    if (process.env.ANDROID_SDK == null || buildToolsVersion == null) {
+      return 'aapt';
+    } else {
+      const allBuildToolsPath = (_nuclideUri || _load_nuclideUri()).default.join(process.env.ANDROID_SDK, 'build-tools');
+      const exactBuildToolPath = (_nuclideUri || _load_nuclideUri()).default.join(allBuildToolsPath, buildToolsVersion);
+      const aaptPath = (_nuclideUri || _load_nuclideUri()).default.join(exactBuildToolPath, 'aapt');
+      if (yield (_fsPromise || _load_fsPromise()).default.exists(aaptPath)) {
+        return aaptPath;
+      } else {
+        return 'aapt';
+      }
+    }
+  });
+
+  return function getAaptBinary(_x37) {
+    return _ref16.apply(this, arguments);
+  };
+})();
+
+let getApkManifest = exports.getApkManifest = (() => {
+  var _ref17 = (0, _asyncToGenerator.default)(function* (apkPath, buildToolsVersion) {
+    const aaptBinary = yield getAaptBinary(buildToolsVersion);
+    return (0, (_process || _load_process()).runCommand)(aaptBinary, ['dump', 'badging', apkPath]).toPromise();
+  });
+
+  return function getApkManifest(_x38, _x39) {
+    return _ref17.apply(this, arguments);
   };
 })();
 
@@ -167,12 +198,17 @@ exports.getJavaProcesses = getJavaProcesses;
 exports.addAdbPort = addAdbPort;
 exports.removeAdbPort = removeAdbPort;
 exports.getAdbPorts = getAdbPorts;
-exports.getApkManifest = getApkManifest;
 
-var _DebugBridge;
+var _fsPromise;
 
-function _load_DebugBridge() {
-  return _DebugBridge = require('./common/DebugBridge');
+function _load_fsPromise() {
+  return _fsPromise = _interopRequireDefault(require('nuclide-commons/fsPromise'));
+}
+
+var _nuclideUri;
+
+function _load_nuclideUri() {
+  return _nuclideUri = _interopRequireDefault(require('nuclide-commons/nuclideUri'));
 }
 
 var _Store;
@@ -209,25 +245,23 @@ function _load_process() {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-/**
- * Copyright (c) 2015-present, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the license found in the LICENSE file in
- * the root directory of this source tree.
- *
- * 
- * @format
- */
-
-const ADB = 'adb';
+const ADB = 'adb'; /**
+                    * Copyright (c) 2015-present, Facebook, Inc.
+                    * All rights reserved.
+                    *
+                    * This source code is licensed under the license found in the LICENSE file in
+                    * the root directory of this source tree.
+                    *
+                    * 
+                    * @format
+                    */
 
 function getDeviceInfo(device) {
   return new (_Adb || _load_Adb()).Adb(device).getDeviceInfo().publish();
 }
 
-function getProcesses(device) {
-  return new (_Processes || _load_Processes()).Processes(new (_Adb || _load_Adb()).Adb(device)).fetch().publish();
+function getProcesses(device, timeout) {
+  return new (_Processes || _load_Processes()).Processes(new (_Adb || _load_Adb()).Adb(device)).fetch(timeout).publish();
 }
 
 function getDeviceList() {
@@ -258,8 +292,4 @@ function removeAdbPort(port) {
 
 function getAdbPorts() {
   return Promise.resolve((0, (_Store || _load_Store()).getStore)('adb').getPorts());
-}
-
-function getApkManifest(apkPath) {
-  return (0, (_process || _load_process()).runCommand)('aapt', ['dump', 'badging', apkPath]).toPromise();
 }

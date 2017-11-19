@@ -1,5 +1,7 @@
 'use strict';
 
+var _asyncToGenerator = _interopRequireDefault(require('async-to-generator'));
+
 var _createPackage;
 
 function _load_createPackage() {
@@ -68,22 +70,28 @@ function _load_redux() {
   return _redux = require('redux');
 }
 
+var _ToolbarUtils;
+
+function _load_ToolbarUtils() {
+  return _ToolbarUtils = require('../../nuclide-ui/ToolbarUtils');
+}
+
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-/**
- * Copyright (c) 2015-present, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the license found in the LICENSE file in
- * the root directory of this source tree.
- *
- * 
- * @format
- */
+const MAXIMUM_SERIALIZED_MESSAGES_CONFIG = 'nuclide-console.maximumSerializedMessages'; /**
+                                                                                         * Copyright (c) 2015-present, Facebook, Inc.
+                                                                                         * All rights reserved.
+                                                                                         *
+                                                                                         * This source code is licensed under the license found in the LICENSE file in
+                                                                                         * the root directory of this source tree.
+                                                                                         *
+                                                                                         * 
+                                                                                         * @format
+                                                                                         */
 
-const MAXIMUM_SERIALIZED_MESSAGES_CONFIG = 'nuclide-console.maximumSerializedMessages';
+const MAXIMUM_SERIALIZED_HISTORY_CONFIG = 'nuclide-console.maximumSerializedHistory';
 
 class Activation {
 
@@ -121,12 +129,12 @@ class Activation {
 
   consumeToolBar(getToolBar) {
     const toolBar = getToolBar('nuclide-console');
-    toolBar.addButton({
+    toolBar.addButton((0, (_ToolbarUtils || _load_ToolbarUtils()).makeToolbarButtonSpec)({
       icon: 'terminal',
       callback: 'nuclide-console:toggle',
       tooltip: 'Toggle Console',
       priority: 700
-    });
+    }));
     this._disposables.add(() => {
       toolBar.removeItems();
     });
@@ -140,6 +148,39 @@ class Activation {
         this._getStore().dispatch((_Actions || _load_Actions()).setCreatePasteFunction(null));
       }
     });
+  }
+
+  consumeWatchEditor(watchEditor) {
+    this._getStore().dispatch((_Actions || _load_Actions()).setWatchEditor(watchEditor));
+    return new (_UniversalDisposable || _load_UniversalDisposable()).default(() => {
+      if (this._getStore().getState().watchEditor === watchEditor) {
+        this._getStore().dispatch((_Actions || _load_Actions()).setWatchEditor(null));
+      }
+    });
+  }
+
+  provideAutocomplete() {
+    const activation = this;
+    return {
+      labels: ['nuclide-console'],
+      selector: '*',
+      // Copies Chrome devtools and puts history suggestions at the bottom.
+      suggestionPriority: -1,
+      getSuggestions(request) {
+        return (0, _asyncToGenerator.default)(function* () {
+          // History provides suggestion only on exact match to current input.
+          const prefix = request.editor.getText();
+          const history = activation._getStore().getState().history;
+          // Use a set to remove duplicates.
+          const seen = new Set(history);
+          return Array.from(seen).filter(function (text) {
+            return text.startsWith(prefix);
+          }).map(function (text) {
+            return { text, replacementPrefix: prefix };
+          });
+        })();
+      }
+    };
   }
 
   _registerCommandAndOpener() {
@@ -214,7 +255,9 @@ class Activation {
             scopeName: message.scopeName,
             sourceId: sourceInfo.id,
             kind: message.kind || 'message',
-            timestamp: new Date() }));
+            timestamp: new Date(), // TODO: Allow this to come with the message?
+            repeatCount: 1
+          }));
         },
         setStatus(status) {
           if (!(activation != null && !disposed)) {
@@ -289,8 +332,10 @@ class Activation {
       return {};
     }
     const maximumSerializedMessages = (_featureConfig || _load_featureConfig()).default.get(MAXIMUM_SERIALIZED_MESSAGES_CONFIG);
+    const maximumSerializedHistory = (_featureConfig || _load_featureConfig()).default.get(MAXIMUM_SERIALIZED_HISTORY_CONFIG);
     return {
-      records: this._store.getState().records.slice(-maximumSerializedMessages)
+      records: this._store.getState().records.slice(-maximumSerializedMessages),
+      history: this._store.getState().history.slice(-maximumSerializedHistory)
     };
   }
 }
@@ -301,7 +346,7 @@ function deserializeAppState(rawState) {
     createPasteFunction: null,
     currentExecutorId: null,
     records: rawState && rawState.records ? rawState.records.map(deserializeRecord) : [],
-    history: [],
+    history: rawState && rawState.history ? rawState.history : [],
     providers: new Map(),
     providerStatuses: new Map(),
 

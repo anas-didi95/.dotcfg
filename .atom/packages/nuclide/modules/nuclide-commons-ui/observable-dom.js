@@ -5,6 +5,8 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.ResizeObservable = exports.PerformanceObservable = exports.MutationObservable = exports.IntersectionObservable = exports._DOMObserverObservable = undefined;
 
+var _os = _interopRequireDefault(require('os'));
+
 var _rxjsBundlesRxMinJs = require('rxjs/bundles/Rx.min.js');
 
 var _shallowequal;
@@ -74,6 +76,22 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
  *
  *   mutations.subscribe(record => console.log(record));
  */
+
+// $FlowFixMe(>=0.55.0) Flow suppress
+/**
+ * Copyright (c) 2017-present, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. An additional grant
+ * of patent rights can be found in the PATENTS file in the same directory.
+ *
+ * 
+ * @format
+ */
+
+/* eslint-env browser */
+/* global IntersectionObserver, PerformanceObserver, ResizeObserver, DOMRect */
 
 class DOMObserverObservable extends _rxjsBundlesRxMinJs.Observable {
 
@@ -168,20 +186,7 @@ class DOMObserverObservable extends _rxjsBundlesRxMinJs.Observable {
 
     return subscription;
   }
-} /**
-   * Copyright (c) 2017-present, Facebook, Inc.
-   * All rights reserved.
-   *
-   * This source code is licensed under the BSD-style license found in the
-   * LICENSE file in the root directory of this source tree. An additional grant
-   * of patent rights can be found in the PATENTS file in the same directory.
-   *
-   * 
-   * @format
-   */
-
-/* eslint-env browser */
-/* global IntersectionObserver, PerformanceObserver, ResizeObserver */
+}
 
 const _DOMObserverObservable = exports._DOMObserverObservable = DOMObserverObservable;
 
@@ -190,9 +195,13 @@ const _DOMObserverObservable = exports._DOMObserverObservable = DOMObserverObser
  */
 class IntersectionObservable extends DOMObserverObservable {
   constructor(target) {
-    if (!(global.IntersectionObserver !== null)) {
+    if (!(
+    // eslint-disable-next-line eqeqeq
+    global.IntersectionObserver !== null)) {
       throw new Error('environment must contain IntersectionObserver');
     }
+    // $FlowFixMe(>=0.55.0) Flow suppress
+
 
     super(IntersectionObserver, target);
   }
@@ -204,9 +213,13 @@ exports.IntersectionObservable = IntersectionObservable; /**
 
 class MutationObservable extends DOMObserverObservable {
   constructor(target, options) {
-    if (!(global.MutationObserver !== null)) {
+    if (!(
+    // eslint-disable-next-line eqeqeq
+    global.MutationObserver !== null)) {
       throw new Error('environment must contain MutationObserver');
     }
+    // $FlowFixMe(>=0.55.0) Flow suppress
+
 
     super(MutationObserver, target);
   }
@@ -218,9 +231,13 @@ exports.MutationObservable = MutationObservable; /**
 
 class PerformanceObservable extends DOMObserverObservable {
   constructor(options) {
-    if (!(global.PerformanceObserver !== null)) {
+    if (!(
+    // eslint-disable-next-line eqeqeq
+    global.PerformanceObserver !== null)) {
       throw new Error('environment must contain PerformanceObserver');
     }
+    // $FlowFixMe(>=0.55.0) Flow suppress
+
 
     super(PerformanceObserver, options);
   }
@@ -232,11 +249,79 @@ exports.PerformanceObservable = PerformanceObservable; /**
 
 class ResizeObservable extends DOMObserverObservable {
   constructor(target) {
-    if (!(global.ResizeObserver !== null)) {
+    if (!(
+    // eslint-disable-next-line eqeqeq
+    global.ResizeObserver !== null)) {
       throw new Error('environment must contain ResizeObserver');
     }
 
-    super(ResizeObserver, target);
+    if (_os.default.platform() === 'win32') {
+      super(WindowsResizeMeasurementPatchingObserver, target);
+    } else {
+      // $FlowFixMe(>=0.55.0) Flow suppress
+      super(ResizeObserver, target);
+    }
   }
 }
+
 exports.ResizeObservable = ResizeObservable;
+function lastRectPerTarget(entries) {
+  const rectMap = new Map();
+  entries.forEach(entry => rectMap.set(entry.target, entry.contentRect));
+  return rectMap;
+}
+
+function remeasureContentRect(element, contentRect) {
+  const { clientHeight, clientWidth } = element;
+
+  // Client height/width include padding
+  // https://developer.mozilla.org/en-US/docs/Web/API/Element/clientWidth
+  // We have to strip it to obtain result similar to what the original computed style provided
+  const computedStyle = window.getComputedStyle(element);
+  const { paddingLeft, paddingRight, paddingTop, paddingBottom } = computedStyle;
+
+  const height = clientHeight - parseFloat(paddingTop) - parseFloat(paddingBottom);
+  const width = clientWidth - parseFloat(paddingLeft) - parseFloat(paddingRight);
+
+  return new DOMRect(contentRect.x, contentRect.y, width, height);
+}
+
+/*
+ * The values provided by the ResizeOverver on Windows do not seem to reflect the actual size
+ * of the element (!!!), so we need to "fix" them before passing on to the downstream subscriber
+ * We're wrapping the ResizeObserver instance and are patching the last result of the array with
+ * a set of custom measured values
+ */
+class WindowsResizeMeasurementPatchingObserver {
+
+  constructor(callback, ...rest) {
+    const remeasuringCallback = entries => {
+      const rebuiltEntries = [];
+      const mappedRects = lastRectPerTarget(entries);
+      mappedRects.forEach((originalRect, target) => {
+        const contentRect = remeasureContentRect(target, originalRect);
+        rebuiltEntries.push({ target, contentRect });
+      });
+
+      callback(rebuiltEntries);
+    };
+    this._resizeObserver = new ResizeObserver(remeasuringCallback, ...rest);
+
+    // To make flow happy
+    return this;
+  }
+
+  observe(...observeArgs) {
+    this._resizeObserver.observe(...observeArgs);
+  }
+
+  disconnect() {
+    this._resizeObserver.disconnect();
+  }
+
+  unobserve(...unobserveArgs) {
+    if (typeof this._resizeObserver.unobserve === 'function') {
+      this._resizeObserver.unobserve(...unobserveArgs);
+    }
+  }
+}

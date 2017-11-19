@@ -1,14 +1,17 @@
-const {Disposable, Emitter, CompositeDisposable} = require("atom")
 const globalState = require("./global-state")
 const VimState = require("./vim-state")
 const Base = require("./base")
 
-module.exports = class DemoModeSupport {
-  constructor({onWillAddItem, onDidStart, onDidStop, onDidRemoveHover}) {
-    this.disposables = new CompositeDisposable(
+class DemoModeSupport {
+  init({onWillAddItem, onDidStart, onDidStop, onWillFadeoutHover, onDidRemoveHover}) {
+    const destroyAllDemoModeFlasheMarkers = this.destroyAllDemoModeFlasheMarkers.bind(this)
+
+    // Returns disposables
+    return [
       onDidStart(() => globalState.set("demoModeIsActive", true)),
       onDidStop(() => globalState.set("demoModeIsActive", false)),
-      onDidRemoveHover(this.destroyAllDemoModeFlasheMarkers.bind(this)),
+      onDidRemoveHover(destroyAllDemoModeFlasheMarkers),
+      onWillFadeoutHover(destroyAllDemoModeFlasheMarkers),
       onWillAddItem(({item, event}) => {
         if (event.binding.command.startsWith("vim-mode-plus:")) {
           const commandElement = item.getElementsByClassName("command")[0]
@@ -18,8 +21,8 @@ module.exports = class DemoModeSupport {
         element.classList.add("kind", "pull-right")
         element.textContent = this.getKindForCommand(event.binding.command)
         item.appendChild(element)
-      })
-    )
+      }),
+    ]
   }
 
   destroyAllDemoModeFlasheMarkers() {
@@ -40,3 +43,5 @@ module.exports = class DemoModeSupport {
     }
   }
 }
+
+module.exports = new DemoModeSupport()

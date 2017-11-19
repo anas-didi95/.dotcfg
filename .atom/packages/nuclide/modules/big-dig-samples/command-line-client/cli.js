@@ -73,15 +73,16 @@ function parseArgsAndRunMain() {
 
   return new Promise((resolve, reject) => {
     const sshHandshake = new (_SshHandshake || _load_SshHandshake()).SshHandshake({
-      onKeyboardInteractive(name, instructions, instructionsLang, prompts, finish) {
-        if (!(prompts.length > 0)) {
-          throw new Error('Invariant violation: "prompts.length > 0"');
-        }
+      onKeyboardInteractive(name, instructions, instructionsLang, prompts) {
+        return (0, _asyncToGenerator.default)(function* () {
+          if (!(prompts.length > 0)) {
+            throw new Error('Invariant violation: "prompts.length > 0"');
+          }
 
-        const { prompt, echo } = prompts[0];
-        (0, (_readline || _load_readline()).question)(prompt, !echo).then(answer => {
-          finish([answer]);
-        });
+          const { prompt, echo } = prompts[0];
+          const answer = yield (0, (_readline || _load_readline()).question)(prompt, !echo);
+          return [answer];
+        })();
       },
 
       onWillConnect() {
@@ -119,9 +120,10 @@ function parseArgsAndRunMain() {
       username: (0, (_username || _load_username()).getUsername)(),
       pathToPrivateKey: privateKey,
       authMethod: 'PRIVATE_KEY',
-      remoteServerCommand,
+      remoteServer: { command: remoteServerCommand },
       remoteServerCustomParams: {},
-      password: '' });
+      password: '' // Should probably be nullable because of the authMethod.
+    });
   });
 }
 

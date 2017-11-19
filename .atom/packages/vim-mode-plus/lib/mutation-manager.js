@@ -71,9 +71,23 @@ module.exports = class MutationManager {
   }
 
   getSelectedBufferRangesForCheckpoint(checkpoint) {
-    return Array.from(this.mutationsBySelection.values())
+    return [...this.mutationsBySelection.values()]
       .map(mutation => mutation.bufferRangeByCheckpoint[checkpoint])
       .filter(range => range)
+  }
+
+  restoreCursorsToInitialPosition() {
+    for (const selection of this.editor.getSelections()) {
+      const point = this.getInitialPointForSelection(selection)
+      if (point) selection.cursor.setBufferPosition(point)
+    }
+  }
+
+  getInitialPointForSelection(selection) {
+    const mutation = this.mutationsBySelection.get(selection)
+    if (mutation && mutation.createdAt === "will-select") {
+      return mutation.initialPoint
+    }
   }
 
   restoreCursorPositions({stay, wise, setToFirstCharacterOnLinewise}) {

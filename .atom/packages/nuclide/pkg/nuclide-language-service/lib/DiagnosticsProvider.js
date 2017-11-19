@@ -108,6 +108,7 @@ function registerDiagnostics(name, grammars, config, logger, connectionToLanguag
       provider = new ObservableDiagnosticProvider(config.analyticsEventName, grammars, logger, connectionToLanguageService);
       break;
     default:
+      config.version;
       throw new Error('Unexpected diagnostics version');
   }
   result.add(atom.packages.serviceHub.provide('DEPRECATED-diagnostics', config.version, provider));
@@ -187,19 +188,17 @@ class FileDiagnosticsProvider {
           pathsForHackLanguage.add(path);
         }
       };
-      if (diagnostics.filePathToMessages != null) {
-        diagnostics.filePathToMessages.forEach(function (messages, messagePath) {
-          addPath(messagePath);
-          messages.forEach(function (message) {
-            addPath(message.filePath);
-            if (message.trace != null) {
-              message.trace.forEach(function (trace) {
-                addPath(trace.filePath);
-              });
-            }
-          });
+      diagnostics.forEach(function (messages, messagePath) {
+        addPath(messagePath);
+        messages.forEach(function (message) {
+          addPath(message.filePath);
+          if (message.trace != null) {
+            message.trace.forEach(function (trace) {
+              addPath(trace.filePath);
+            });
+          }
         });
-      }
+      });
 
       _this._providerBase.publishMessageUpdate(diagnostics);
     }));
@@ -302,23 +301,18 @@ class ObservableDiagnosticProvider {
           return _rxjsBundlesRxMinJs.Observable.empty();
         }));
       }).map(updates => {
+        (0, (_nuclideAnalytics || _load_nuclideAnalytics()).track)(this._analyticsEventName);
         const filePathToMessages = new Map();
-        updates.forEach(update => {
-          const { filePath, messages } = update;
-          (0, (_nuclideAnalytics || _load_nuclideAnalytics()).track)(this._analyticsEventName);
+        updates.forEach((messages, filePath) => {
           const fileCache = this._connectionToFiles.get(connection);
           if (messages.length === 0) {
-            this._logger.debug(`Observing diagnostics: removing ${filePath}, ${this._analyticsEventName}`);
             fileCache.delete(filePath);
           } else {
-            this._logger.debug(`Observing diagnostics: adding ${filePath}, ${this._analyticsEventName}`);
             fileCache.add(filePath);
           }
           filePathToMessages.set(filePath, messages);
         });
-        return {
-          filePathToMessages
-        };
+        return filePathToMessages;
       });
     }).catch(error => {
       this._logger.error(`Error: observeEntries, ${this._analyticsEventName}`, error);

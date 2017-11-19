@@ -141,7 +141,7 @@ class DbgpSocket {
 
   _onData(data) {
     const message = data.toString();
-    (_utils || _load_utils()).default.debug('Recieved data: ' + message);
+    (_utils || _load_utils()).default.debug('Received data: ' + message);
     let responses = [];
     try {
       responses = this._messageHandler.parseMessages(message);

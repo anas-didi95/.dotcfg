@@ -39,12 +39,6 @@
   'ctrl-r': 'vim-mode-plus:insert-register'
   'ctrl-o': 'vim-mode-plus:activate-normal-mode-once'
 
-# Insert-replace
-# -------------------------
-'atom-text-editor.vim-mode-plus.insert-mode.replace':
-  'ctrl-h': 'vim-mode-plus:replace-mode-backspace'
-  'backspace': 'vim-mode-plus:replace-mode-backspace'
-
 # except insert
 # -------------------------
 'atom-text-editor.vim-mode-plus:not(.insert-mode)':
@@ -111,12 +105,17 @@
   'g $': 'vim-mode-plus:move-to-last-character-of-screen-line'
 
   # scroll
-  'ctrl-u': 'vim-mode-plus:scroll-half-screen-up'
-  'ctrl-b': 'vim-mode-plus:scroll-full-screen-up'
-  'ctrl-d': 'vim-mode-plus:scroll-half-screen-down'
   'ctrl-f': 'vim-mode-plus:scroll-full-screen-down'
-  'ctrl-e': 'vim-mode-plus:scroll-down'
-  'ctrl-y': 'vim-mode-plus:scroll-up'
+  'ctrl-b': 'vim-mode-plus:scroll-full-screen-up'
+
+  'ctrl-d': 'vim-mode-plus:scroll-half-screen-down'
+  'ctrl-u': 'vim-mode-plus:scroll-half-screen-up'
+
+  'g ctrl-d': 'vim-mode-plus:scroll-quarter-screen-down'
+  'g ctrl-u': 'vim-mode-plus:scroll-quarter-screen-up'
+
+  'ctrl-e': 'vim-mode-plus:mini-scroll-down'
+  'ctrl-y': 'vim-mode-plus:mini-scroll-up'
 
   'G': 'vim-mode-plus:move-to-last-line'
   'g g': 'vim-mode-plus:move-to-first-line'
@@ -130,10 +129,12 @@
   'c': 'vim-mode-plus:change'
   's': 'vim-mode-plus:substitute'
   'x': 'vim-mode-plus:delete-right' # to avoid `d x` is treated as `d d`
-  'D': 'vim-mode-plus:delete-line'
 
+  'D': 'vim-mode-plus:delete-to-last-character-of-line'
   'C': 'vim-mode-plus:change-to-last-character-of-line'
   'S': 'vim-mode-plus:substitute-line'
+  'Y': 'vim-mode-plus:yank-line'
+
   'r': 'vim-mode-plus:replace'
   'g o': 'vim-mode-plus:toggle-preset-occurrence'
   'g O': 'vim-mode-plus:toggle-preset-subword-occurrence'
@@ -147,7 +148,6 @@
   'J': 'vim-mode-plus:join'
   'g J': 'vim-mode-plus:join-with-keeping-space'
   'y': 'vim-mode-plus:yank'
-  'Y': 'vim-mode-plus:yank-line'
   'P': 'vim-mode-plus:put-before'
   'p': 'vim-mode-plus:put-after'
 
@@ -291,12 +291,18 @@
   'shift-tab': 'vim-mode-plus:move-to-previous-occurrence'
 
 'atom-text-editor.vim-mode-plus:not(.insert-mode):not(.operator-pending-mode)':
-  'z enter': 'vim-mode-plus:scroll-cursor-to-top'
-  'z t': 'vim-mode-plus:scroll-cursor-to-top-leave'
-  'z .': 'vim-mode-plus:scroll-cursor-to-middle'
-  'z z': 'vim-mode-plus:scroll-cursor-to-middle-leave'
-  'z -': 'vim-mode-plus:scroll-cursor-to-bottom'
-  'z b': 'vim-mode-plus:scroll-cursor-to-bottom-leave'
+  'z t': 'vim-mode-plus:redraw-cursor-line-at-top'
+  'z enter': 'vim-mode-plus:redraw-cursor-line-at-top-and-move-to-first-character-of-line'
+
+  'z u': 'vim-mode-plus:redraw-cursor-line-at-upper-middle'
+  'z space': 'vim-mode-plus:redraw-cursor-line-at-upper-middle-and-move-to-first-character-of-line'
+
+  'z z': 'vim-mode-plus:redraw-cursor-line-at-middle'
+  'z .': 'vim-mode-plus:redraw-cursor-line-at-middle-and-move-to-first-character-of-line'
+
+  'z b': 'vim-mode-plus:redraw-cursor-line-at-bottom'
+  'z -': 'vim-mode-plus:redraw-cursor-line-at-bottom-and-move-to-first-character-of-line'
+
   'z s': 'vim-mode-plus:scroll-cursor-to-left'
   'z e': 'vim-mode-plus:scroll-cursor-to-right'
 
@@ -446,7 +452,6 @@
   'I': 'vim-mode-plus:insert-at-first-character-of-line'
   'A': 'vim-mode-plus:insert-after-end-of-line'
   'g i': 'vim-mode-plus:insert-at-last-insert'
-  'D': 'vim-mode-plus:delete-to-last-character-of-line'
 
   'R': 'vim-mode-plus:activate-replace-mode'
   'v': 'vim-mode-plus:activate-characterwise-visual-mode'
@@ -493,6 +498,12 @@
   # In this scope, all operator keys are safely remappable.
   # e.g. p, d, D, x, u, X, S, ., r
 
+'.platform-win32, atom-text-editor.vim-mode-plus.operator-pending-mode':
+  'ctrl-a': 'vim-mode-plus:inner-entire'
+
+'.platform-linux, atom-text-editor.vim-mode-plus.operator-pending-mode':
+  'ctrl-a': 'vim-mode-plus:inner-entire'
+
 # operator-pending with operator specified
 # -------------------------
 # `c c` to works as change current line.
@@ -516,7 +527,6 @@
   'p': 'vim-mode-plus:inner-paragraph'
   'P': 'vim-mode-plus:inner-paragraph' # in-case SHIFT is not keyuped. when O modifier
   'r': 'vim-mode-plus:a-persistent-selection'
-  'v': 'vim-mode-plus:inner-visible-area'
   'f': 'vim-mode-plus:a-function'
   'F': 'vim-mode-plus:a-function' # in-case SHIFT is not keyuped. when O modifier
   'l': 'vim-mode-plus:inner-current-line'
@@ -641,6 +651,9 @@
   'V': 'vim-mode-plus:activate-linewise-visual-mode'
   'ctrl-v': 'vim-mode-plus:activate-blockwise-visual-mode'
   'enter': 'vim-mode-plus:create-persistent-selection'
+  'D': 'vim-mode-plus:delete-line'
+  'C': 'vim-mode-plus:change-line'
+  'Y': 'vim-mode-plus:yank-line'
 
 'atom-text-editor.vim-mode-plus.has-persistent-selection.normal-mode, atom-text-editor.vim-mode-plus.visual-mode':
   'I': 'vim-mode-plus:insert-at-start-of-target'
@@ -648,17 +661,13 @@
   # 'p': 'vim-mode-plus:swap-with-register'
   # 'P': 'vim-mode-plus:swap-with-register'
 
-# visual-characterwise
-# -------------------------
-'atom-text-editor.vim-mode-plus.visual-mode.characterwise':
-  'C': 'vim-mode-plus:change-line'
-
 # visual-blockwise
 # -------------------------
 'atom-text-editor.vim-mode-plus.visual-mode.blockwise':
   'o': 'vim-mode-plus:blockwise-other-end'
   'O': 'vim-mode-plus:reverse-selections'
-  'D': 'vim-mode-plus:delete-to-last-character-of-line' # To avoid overridden by delete-line in visual-mode
+  'D': 'vim-mode-plus:delete-to-last-character-of-line'
+  'C': 'vim-mode-plus:change-to-last-character-of-line'
 
 # Input mini editor e.g. mark, surround, find, till.
 # -------------------------

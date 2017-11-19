@@ -1,5 +1,7 @@
 'use strict';
 
+var _asyncToGenerator = _interopRequireDefault(require('async-to-generator'));
+
 var _createPackage;
 
 function _load_createPackage() {
@@ -16,6 +18,12 @@ var _UniversalDisposable;
 
 function _load_UniversalDisposable() {
   return _UniversalDisposable = _interopRequireDefault(require('nuclide-commons/UniversalDisposable'));
+}
+
+var _nuclideRemoteConnection;
+
+function _load_nuclideRemoteConnection() {
+  return _nuclideRemoteConnection = require('../../nuclide-remote-connection');
 }
 
 var _TunnelsPanel;
@@ -88,7 +96,16 @@ class Activation {
       openTunnel: (tunnel, onOpen, onClose) => {
         this._store.dispatch((_Actions || _load_Actions()).openTunnel(tunnel, onOpen, onClose));
         return new _atom.Disposable(() => this._store.dispatch((_Actions || _load_Actions()).closeTunnel(tunnel)));
-      }
+      },
+      getAvailableServerPort: (() => {
+        var _ref = (0, _asyncToGenerator.default)(function* (nuclideUri) {
+          return (0, (_nuclideRemoteConnection || _load_nuclideRemoteConnection()).getSocketServiceByNuclideUri)(nuclideUri).getAvailableServerPort();
+        });
+
+        return function getAvailableServerPort(_x) {
+          return _ref.apply(this, arguments);
+        };
+      })()
     };
   }
 
@@ -99,6 +116,12 @@ class Activation {
   _closeAllTunnels() {
     const tunnels = this._store.getState().openTunnels;
     tunnels.forEach((_, tunnel) => this._store.dispatch((_Actions || _load_Actions()).closeTunnel(tunnel)));
+  }
+
+  consumeCurrentWorkingDirectory(api) {
+    this._disposables.add(api.observeCwd(directory => {
+      this._store.dispatch((_Actions || _load_Actions()).setCurrentWorkingDirectory(directory));
+    }));
   }
 } /**
    * Copyright (c) 2015-present, Facebook, Inc.

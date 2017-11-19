@@ -72,6 +72,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 const WORKSPACE_VIEW_URI = exports.WORKSPACE_VIEW_URI = 'atom://nuclide/console';
 
+const ERROR_TRANSCRIBING_MESSAGE = "// Nuclide couldn't find the right text to display";
 const INITIAL_RECORD_HEIGHT = 21;
 
 // NOTE: We're not accounting for the "store" prop being changed.
@@ -100,7 +101,8 @@ class ConsoleContainer extends _react.Component {
         const record = displayable.record;
         const level = record.level != null ? record.level.toString().toUpperCase() : 'LOG';
         const timestamp = record.timestamp.toLocaleString();
-        return `[${level}][${record.sourceId}][${timestamp}]\t ${record.text}`;
+        const text = record.text || record.data && record.data.value || ERROR_TRANSCRIBING_MESSAGE;
+        return `[${level}][${record.sourceId}][${timestamp}]\t ${text}`;
       }).join('\n');
 
       if (lines === '') {
@@ -111,11 +113,24 @@ class ConsoleContainer extends _react.Component {
 
       atom.notifications.addInfo('Creating Paste...');
 
-      const uri = yield createPasteFunction(lines, {
-        title: 'Nuclide Console Paste'
-      }, 'console paste');
-
-      atom.notifications.addSuccess(`Created Paste at ${uri}`);
+      try {
+        const uri = yield createPasteFunction(lines, {
+          title: 'Nuclide Console Paste'
+        }, 'console paste');
+        atom.notifications.addSuccess(`Created Paste at ${uri}`);
+      } catch (error) {
+        if (error.stdout == null) {
+          atom.notifications.addError(`Failed to create paste: ${String(error.message || error)}`);
+          return;
+        }
+        const errorMessages = error.stdout.trim().split('\n').map(JSON.parse).map(function (e) {
+          return e.message;
+        });
+        atom.notifications.addError('Failed to create paste', {
+          detail: errorMessages.join('\n'),
+          dismissable: true
+        });
+      }
     });
 
     this._selectSources = selectedSourceIds => {
@@ -159,6 +174,7 @@ class ConsoleContainer extends _react.Component {
     this.state = {
       ready: false,
       createPasteFunction: null,
+      watchEditor: null,
       currentExecutor: null,
       providers: new Map(),
       providerStatuses: new Map(),
@@ -217,6 +233,7 @@ class ConsoleContainer extends _react.Component {
       const currentExecutor = currentExecutorId != null ? state.executors.get(currentExecutorId) : null;
       this.setState({
         createPasteFunction: state.createPasteFunction,
+        watchEditor: state.watchEditor,
         ready: true,
         currentExecutor,
         executors: state.executors,
@@ -289,12 +306,15 @@ class ConsoleContainer extends _react.Component {
 
     const createPaste = this.state.createPasteFunction != null ? this._createPaste : null;
 
+    const watchEditor = this.state.watchEditor;
+
     return _react.createElement((_Console || _load_Console()).default, {
       invalidFilterInput: invalid,
       execute: actionCreators.execute,
       selectExecutor: actionCreators.selectExecutor,
       clearRecords: actionCreators.clearRecords,
       createPaste: createPaste,
+      watchEditor: watchEditor,
       currentExecutor: this.state.currentExecutor,
       unselectedSourceIds: this.state.unselectedSourceIds,
       filterText: this.state.filterText,

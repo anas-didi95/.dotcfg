@@ -29,7 +29,15 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 function convertProperties(id, properties) {
   (_utils || _load_utils()).default.debug('Got properties: ' + JSON.stringify(properties));
-  return properties.map(property => convertProperty(id, property));
+  return properties.map(property => convertProperty(id, property)).sort((prop1, prop2) => {
+    // Do not sort array properties lexiographically!
+    const int1 = parseInt(prop1.name, 10);
+    const int2 = parseInt(prop2.name, 10);
+    if (!isNaN(int1) && !isNaN(int2)) {
+      return int1 - int2;
+    }
+    return prop1.name.localeCompare(prop2.name);
+  });
 }
 
 /**

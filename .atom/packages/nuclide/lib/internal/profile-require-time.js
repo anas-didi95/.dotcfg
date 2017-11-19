@@ -52,7 +52,7 @@ function profile_require_time(request, parent, isMain) {
 
   const entry = data[_filename] = {
     depth: 1,
-    init: 0,  // require time
+    init: 0, // require time
     total: 0, // init + deferred require times
     order: ++order,
     basedir,
@@ -86,7 +86,7 @@ function profile_require_time(request, parent, isMain) {
   // diff: [seconds, nanoseconds]
   entry.init = entry.total = diff[0] * 1e3 + diff[1] / 1e6;
 
-  for (let next = _module.parent; next !== null; next = next.parent) {
+  for (let next = _module.parent; next != null; next = next.parent) {
     if (next.filename.startsWith(basedir)) {
       if (next.loaded && data[next.filename]) {
         // Account for deferred require load times.

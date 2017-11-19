@@ -32,6 +32,7 @@ const path = require('path');
 const os = require('os');
 
 const docblock = require('./docblock');
+const {__DEV__} = require('./env');
 
 const BABEL_OPTIONS = {
   parserOpts: {
@@ -60,6 +61,8 @@ const BABEL_OPTIONS = {
     [require.resolve('babel-plugin-transform-flow-strip-types')],
     [require.resolve('babel-plugin-transform-react-display-name')],
 
+    [require.resolve('babel-plugin-relay')],
+
     // Toggle these to control inline-imports:
     // [require.resolve('babel-plugin-transform-es2015-modules-commonjs')],
     [require.resolve('babel-plugin-transform-inline-imports-commonjs'), {
@@ -75,6 +78,18 @@ const BABEL_OPTIONS = {
     }],
   ],
 };
+
+const {COVERAGE_DIR} = process.env;
+if (COVERAGE_DIR) {
+  BABEL_OPTIONS.plugins.push(
+    [require.resolve('babel-plugin-istanbul')]
+  );
+  BABEL_OPTIONS.sourceMap = 'inline';
+} else if (__DEV__ && global.atom) {
+  // If running in Atom & is in active development,
+  // We'd inline source maps to be used when debugging.
+  BABEL_OPTIONS.sourceMap = 'inline';
+}
 
 function getVersion(start) {
   let current = start;

@@ -72,6 +72,7 @@ class StatusBarTile extends _react.Component {
         });
         break;
       default:
+        result;
         throw new Error(`Should handle kind ${result.kind}`);
     }
   }

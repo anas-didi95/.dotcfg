@@ -56,6 +56,7 @@ function getLevel(level) {
       // Debug
       return 'debug';
     default:
+      level;
       throw new Error(`Invalid ASL level: ${level}`);
   }
 }

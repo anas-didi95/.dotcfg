@@ -2,8 +2,7 @@ const {Emitter, Disposable, BufferedProcess, CompositeDisposable} = require("ato
 
 const Base = require("./base")
 const settings = require("./settings")
-let getEditorState
-const OPERATION_KINDS = ["Operator", "Motion", "TextObject", "InsertMode", "MiscCommand", "Scroll"]
+const VimState = require("./vim-state")
 
 // Borrowed from underscore-plus
 const ModifierKeyMap = {
@@ -35,36 +34,27 @@ const SelectorMap = {
   ".has-persistent-selection": "%",
 }
 
-module.exports = class Developer {
-  init(_getEditorState) {
-    getEditorState = _getEditorState
-
-    const commands = {
-      "toggle-debug": () => this.toggleDebug(),
-      "open-in-vim": () => this.openInVim(),
-      "generate-command-summary-table": () => this.generateCommandSummaryTable(),
-      "write-command-table-on-disk"() {
-        Base.writeCommandTableOnDisk()
-      },
-      "set-global-vim-state": () => this.setGlobalVimState(),
-      "clear-debug-output": () => this.clearDebugOutput(),
-      reload: () => this.reload(),
-      "reload-with-dependencies": () => this.reload(true),
-      "report-total-marker-count": () => this.reportTotalMarkerCount(),
-      "report-total-and-per-editor-marker-count": () => this.reportTotalMarkerCount(true),
-      "report-require-cache": () => this.reportRequireCache({excludeNodModules: true}),
-      "report-require-cache-all": () => this.reportRequireCache({excludeNodModules: false}),
-    }
-
-    const subscriptions = new CompositeDisposable()
-    const addCommand = (name, fn) => atom.commands.add("atom-text-editor", `vim-mode-plus:${name}`, fn)
-    subscriptions.add(...Object.keys(commands).map(name => addCommand(name, commands[name])))
-    return subscriptions
+class Developer {
+  init() {
+    return atom.commands.add("atom-text-editor", {
+      "vim-mode-plus:toggle-debug": () => this.toggleDebug(),
+      "vim-mode-plus:open-in-vim": () => this.openInVim(),
+      "vim-mode-plus:generate-command-summary-table": () => this.generateCommandSummaryTable(),
+      "vim-mode-plus:write-command-table-and-file-table-to-disk": () => Base.writeCommandTableAndFileTableToDisk(),
+      "vim-mode-plus:set-global-vim-state": () => this.setGlobalVimState(),
+      "vim-mode-plus:clear-debug-output": () => this.clearDebugOutput(),
+      "vim-mode-plus:reload": () => this.reload(),
+      "vim-mode-plus:reload-with-dependencies": () => this.reload(true),
+      "vim-mode-plus:report-total-marker-count": () => this.reportTotalMarkerCount(),
+      "vim-mode-plus:report-total-and-per-editor-marker-count": () => this.reportTotalMarkerCount(true),
+      "vim-mode-plus:report-require-cache": () => this.reportRequireCache({excludeNodModules: true}),
+      "vim-mode-plus:report-require-cache-all": () => this.reportRequireCache({excludeNodModules: false}),
+    })
   }
 
-  setGlobalVimStat() {
-    global.vimState = getEditorState(atom.workspace.getActiveTextEditor())
-    console.log("set global.vimState for debug", global.vimState);
+  setGlobalVimState() {
+    global.vimState = VimState.get(atom.workspace.getActiveTextEditor())
+    console.log("set global.vimState for debug", global.vimState)
   }
 
   reportRequireCache({focus, excludeNodModules}) {
@@ -97,7 +87,7 @@ module.exports = class Developer {
     }
 
     for (const editor of atom.workspace.getTextEditors()) {
-      const vimState = getEditorState(editor)
+      const vimState = VimState.get(editor)
       const mark = vimState.mark.markerLayer.getMarkerCount()
       const hlsearch = vimState.highlightSearch.markerLayer.getMarkerCount()
       const mutation = vimState.mutationManager.markerLayer.getMarkerCount()
@@ -119,7 +109,9 @@ module.exports = class Developer {
 
   reload(reloadDependencies) {
     function deleteRequireCacheForPathPrefix(prefix) {
-      Object.keys(require.cache).filter(p => p.startsWith(prefix)).forEach(p => delete require.cache[p])
+      Object.keys(require.cache)
+        .filter(p => p.startsWith(prefix))
+        .forEach(p => delete require.cache[p])
     }
 
     const packagesNeedReload = ["vim-mode-plus"]
@@ -166,15 +158,46 @@ module.exports = class Developer {
 
   getCommandSpecs() {
     const _ = require("underscore-plus")
-    const {getKeyBindingForCommand, getAncestors} = require("./utils")
+    const {getKeyBindingForCommand} = require("./utils")
 
-    const registry = Base.getClassRegistry()
-    return Object.keys(registry)
-      .filter(name => registry[name].isCommand())
-      .map(name => commandSpecForClass(registry[name]))
+    const filesToLoad = [
+      "./operator",
+      "./operator-insert",
+      "./operator-transform-string",
+      "./motion",
+      "./motion-search",
+      "./text-object",
+      "./misc-command",
+    ]
+
+    const specs = []
+    for (const file of filesToLoad) {
+      for (const klass of Object.values(require(file))) {
+        if (!klass.isCommand()) continue
+
+        const commandName = klass.getCommandName()
+
+        const keymaps = getKeyBindingForCommand(commandName, {packageName: "vim-mode-plus"})
+        const keymap = keymaps
+          ? keymaps
+              .map(k => `\`${compactSelector(k.selector)}\` <code>${compactKeystrokes(k.keystrokes)}</code>`)
+              .join("<br/>")
+          : undefined
+
+        specs.push({
+          name: klass.name,
+          commandName: commandName,
+          kind: klass.operationKind,
+          keymap: keymap,
+        })
+      }
+    }
+
+    return specs
 
     function compactSelector(selector) {
-      const regex = new RegExp(`(${_.keys(SelectorMap).map(_.escapeRegExp).join("|")})`, "g")
+      const sources = _.keys(SelectorMap).map(_.escapeRegExp)
+      const regex = new RegExp(`(${sources.join("|")})`, "g")
       return selector
         .split(/,\s*/g)
         .map(scope => scope.replace(/:not\((.*?)\)/g, "!$1").replace(regex, s => SelectorMap[s]))
@@ -183,34 +206,20 @@ module.exports = class Developer {
 
     function compactKeystrokes(keystrokes) {
       const specialChars = "\\`*_{}[]()#+-.!"
-      const specialCharsRegexp = new RegExp(`${specialChars.split("").map(_.escapeRegExp).join("|")}`, "g")
-      const modifierKeyRegexp = new RegExp(`(${_.keys(ModifierKeyMap).map(_.escapeRegExp).join("|")})`)
+
+      const modifierKeyRegexSources = _.keys(ModifierKeyMap).map(_.escapeRegExp)
+      const modifierKeyRegex = new RegExp(`(${modifierKeyRegexSources.join("|")})`)
+      const specialCharsRegexSources = specialChars.split("").map(_.escapeRegExp)
+      const specialCharsRegex = new RegExp(`(${specialCharsRegexSources.join("|")})`, "g")
+
       return (
         keystrokes
           // .replace(/(`|_)/g, '\\$1')
-          .replace(modifierKeyRegexp, s => ModifierKeyMap[s])
-          .replace(new RegExp(`(${specialCharsRegexp})`, "g"), "\\$1")
+          .replace(modifierKeyRegex, s => ModifierKeyMap[s])
+          .replace(specialCharsRegex, "\\$1")
           .replace(/\|/g, "&#124;")
           .replace(/\s+/, "")
       )
-    }
-
-    function commandSpecForClass(klass) {
-      const name = klass.name
-      const ancestors = getAncestors(klass)
-      ancestors.pop()
-      const kind = ancestors.pop().name
-      const commandName = klass.getCommandName()
-      const description = klass.getDesctiption() ? klass.getDesctiption().replace(/\n/g, "<br/>") : undefined
-
-      const keymaps = getKeyBindingForCommand(commandName, {packageName: "vim-mode-plus"})
-      const keymap = keymaps
-        ? keymaps
-            .map(k => `\`${compactSelector(k.selector)}\` <code>${compactKeystrokes(k.keystrokes)}</code>`)
-            .join("<br/>")
-        : undefined
-
-      return {name, commandName, kind, description, keymap}
     }
   }
 
@@ -219,20 +228,27 @@ module.exports = class Developer {
 
     const grouped = _.groupBy(specs, "kind")
     let result = ""
+    const OPERATION_KINDS = ["operator", "motion", "text-object", "misc-command"]
+
     for (let kind of OPERATION_KINDS) {
       const specs = grouped[kind]
       if (!specs) continue
-      const report = [`## ${kind}`, "", "| Keymap | Command | Description |", "|:-------|:--------|:------------|"]
+
+      // prettier-ignore
+      const table = [
+        "| Keymap | Command | Description |",
+        "|:-------|:--------|:------------|",
+      ]
 
       for (let {keymap = "", commandName, description = ""} of specs) {
         commandName = commandName.replace(/vim-mode-plus:/, "")
-        report.push(`| ${keymap} | \`${commandName}\` | ${description} |`)
+        table.push(`| ${keymap} | \`${commandName}\` | ${description} |`)
       }
-      result += report.join("\n") + "\n\n"
+      result += `## ${kind}\n\n` + table.join("\n") + "\n\n"
     }
 
     atom.workspace.open().then(editor => {
-      if (header) editor.insertText(header + "\n")
+      if (header) editor.insertText(header + "\n\n")
       editor.insertText(result)
     })
   }
@@ -272,3 +288,4 @@ module.exports = class Developer {
     })
   }
 }
+module.exports = new Developer()

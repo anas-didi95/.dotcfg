@@ -1,5 +1,188 @@
 # Nuclide Changelog
 
+## v0.268.0
+
+### Highlights
+
+* Nuclide's SSH tunnel now works in both directions!
+
+### General
+
+* Upgrade to [Atom 1.22](http://blog.atom.io/2017/11/07/atom-1-22.html). Along with other improvements, this resolves an issue with copying the current file's relative path from the status bar.
+* The JavaScript imports services now uses an on-disk cache to reduce CPU usage during subsequent runs.
+* Fixed server crashes from misbehaving LSP servers.
+
+## v0.267.0
+
+Another hotfix:
+* Fix remote text buffer reload on Windows.
+* Fix broken React Native packager launch.
+
+## v0.266.0
+
+Hotfix release to fix task runner issues with remote directories.
+
+## v0.265.0
+
+### Highlights
+
+* Revamped the remote file reload experience.
+  * Restarting Nuclide with remote files open now preserves unsaved changes.
+  * Instead of displaying a blank file, remote files are now viewable in read-only mode during reconnection, and are no longer closed if the connection fails to reload.
+
+### General
+
+* Improved performance of diagnostics table rendering.
+* Fixed spurious Flow highlights for older Flow versions (< 0.55).
+* Reduce flakiness of Hyperclick underlines and loading indicators.
+* Outline view is now less aggressive about auto-focusing the search input.
+* Added new terminal option to the context menu of breadcrumbs
+
+### Debugger
+
+* Add autocomplete support for currently in scope variables (in all debuggers).
+* Fix debugger hover evaluation race with language services' type hints.
+* Add loading indicator while evaluating expressions on hovers & inline failure message.
+
+## v0.264.0
+
+### General
+
+* Added a `JS Symbols` provider inside of Quick Open (`Cmd-T`).
+* Improved scrolling performance on file tree (now using `react-virtualized`).
+* Fixed incorrect JS import suggestions for mocks and node_modules.
+* Datatips now appear at the cursor position rather than at the start of the highlighted range.
+* Datatip highlights no longer obscure 'Go to definition' underlines.
+* Type Coverage diagnostics are now blue (info-level).
+* Reduced performance overhead of logging and error analytics.
+
+### Debugger
+
+* Fixed regression in console where multiple debugger messages could be collapsed into a single message if their text was the same.
+* Add autocomplete support for nuclide debuggers (starting with Node).
+* Add debugger commands (repl) history autocomplete support.
+
+### Diagnostics Table
+
+* Improved logic around resizing and column widths.
+* Icons are now color-coded (matching gutter icons).
+* Line number column is now displayed when messages are limited to current file only.
+
+## v0.263.0
+
+### Misc
+
+* Selected diagnostic is now expanded only when the table has focus.
+* Added an option to automatically hide/show diagnostics when available.
+
+### Hack
+
+* Improve Hack grammar parsing of types, constants in argument positions, and default arguments.
+* Fix parsing for lambda and pipe operators in Hack grammar.
+
+### Debugger
+
+* PHP/Hack Debugger: Added missing tooltips to debugger control buttons.
+* C++ Debugger: Fixed a bug that was causing “Continue To Location” not to work at all.
+* C++ Debugger: now accepting paths starting with './' or '~/' in all fields in the Debugger Launch dialog, and they will be expanded properly to be relative to the current working directory, or the user's home directory.
+
+### Flow
+
+* Other occurrences of the local variable under your cursor will now be highlighted.
+
+## v0.262.0
+
+**Hotfix from 0.261.0**
+
+* Fixed a bug causing some tooltips to not get dismissed
+* Await generated file service instead of throwing
+
+## v0.261.0
+
+### Diagnostics
+* Added text and regular expression filtering
+* Added type filtering toggle buttons
+* Improved column sorting
+* Fixed misc. table bugs
+* File directories are now hidden by default (but can be shown via the gear button and resized independently)
+* Added a setting to move status bar icons to the right side.
+
+### General
+
+* Fuzzy filename search on Windows now uses the significantly better native matching library
+* Integrated Terminal is now included in the open-source version of Nuclide.
+
+## v0.260.0
+
+### C++
+
+* A busy signal now indicates when Nuclide is building a compilation database with Buck. (Thanks Anthony Miller!)
+
+### Debugger
+
+* Native debugger: Added disassembly and register views
+* Native debugger: Added ability to set a breakpoint at an instruction address (even without source code available)
+* Native debugger: now allows specifying an executable path beginning with “./” to refer to the current working directory, or “~/” to refer to the user's home directory.
+
+## v0.259.0
+
+**Hotfix from 0.258.0**
+
+* Fix hhvm debugger crashing nuclide server.
+* Workaround broken reveal in remote file tree.
+
+## v0.258.0
+
+### General
+* Fuzzy filename search results now correctly respect .hgignore (Thanks Roy Li!)
+* File tree navigation performance was improved.
+* Fixed a bug causing empty datatips to occasionally appear.
+* The context menu in file-tree was found to sometimes target incorrect files. The menu was temporarily disabled to prevent accidental data loss.
+* Archive files are now correctly treated as read-only.
+* Updated to React 16
+* All Arcanist-related code has been removed from the open-source Nuclide.
+
+## Debugger
+* Fixed bug where console would scroll to the bottom of an expanded object whenever a property was expanded or collapsed for that object.
+* PHP Debugger: Fixed a bug causing variables in the Scopes pane not to update after issuing a console command that changed a variable's value.
+
+## v0.257.0
+
+### General
+* The "Add Remote Connection Profile" dialog now supports tab and shift-tab focusing between inputs.
+* File Tree: New setting to enable focusing the editor when previewing a file (after a single click). Defaults to `false`.
+* For performance reasons, the file tree option to "Reveal File on Switch" is now turned off by default.
+* Fixed bug where the console scroll would not be pinned to the bottom when many multiline comments are logged.
+* Fixed bug where clicking "new messages" in the console will not always scroll all the way to the bottom.
+
+### Debugger
+* PHP Debugger: Added ability to launch a PHP script in the Nuclide terminal - this will allow interacting with STDIN and STDOUT while debugging.
+* Watch Expressions now persist across reloads.
+* Console will now scroll to the bottom if a command is executed in the debugger prompt.
+* Fixed bug where "copy" command in scopes pane was not copying anything to the clipboard.
+
+
+## v0.256.0
+
+**Hotfix from 0.255.0**
+
+* [Windows] Fix Atom failing to reopen with remote files
+* Fix inline JavaScript import suggestions
+
+## v0.255.0
+
+### General
+
+* Archive files (.zip and .jar) can be expanded directly in the file tree, and files inside can be opened locally or remotely in separate first-class editor tabs.
+
+### Debugger
+
+* C++ debugger: Added an option to the Native Launch and Attach dialog to specify an alternate source file path. This will allow you to debug a native binary that has been moved to a location other than the directory in which it was built when the binary contains only relative source file paths.
+* Values are now colored/highlighted depending on their type.
+* PHP Debugger: added message in the console indicating what exception was hit when breaking due to an exception in PHP
+* PHP Debugger: fixed a bug where the action (Attach to Web Server vs Launch Script) in the HHVM toolbar doesn't persist when switching active editor tabs, even if the “Sticky” option is checked
+* PHP Debugger: will now sort locals and object members alphabetically in the Scopes pane
+
 ## v0.254.0
 
 * Hotfix to unbreak Hack language services.

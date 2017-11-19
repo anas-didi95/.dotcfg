@@ -66,6 +66,14 @@ class Sdb extends (_DebugBridge || _load_DebugBridge()).DebugBridge {
     });
   }
 
+  stopProcess(packageName, pid) {
+    var _this2 = this;
+
+    return (0, _asyncToGenerator.default)(function* () {
+      yield _this2.runShortCommand('shell', 'kill', '-9', `${pid}`).toPromise();
+    })();
+  }
+
   getDeviceArchitecture() {
     return this.runShortCommand('shell', 'uname', '-m').map(s => s.trim());
   }
@@ -75,7 +83,7 @@ class Sdb extends (_DebugBridge || _load_DebugBridge()).DebugBridge {
   }
 
   getDebuggableProcesses() {
-    throw new Error('not implemented');
+    return _rxjsBundlesRxMinJs.Observable.of([]);
   }
 
   getAPIVersion() {
@@ -102,6 +110,13 @@ class Sdb extends (_DebugBridge || _load_DebugBridge()).DebugBridge {
 
   getDeviceArgs() {
     return this._device.name !== '' ? ['-s', this._device.name] : [];
+  }
+
+  getProcesses() {
+    return this.runShortCommand('shell', 'for file in /proc/[0-9]*/stat; do cat "$file" 2>/dev/null || true; done').map(stdout => stdout.split(/\n/).map(line => {
+      const info = line.trim().split(/\s+/);
+      return { user: 'n/a', pid: info[0], name: info[1] };
+    }));
   }
 }
 exports.Sdb = Sdb;

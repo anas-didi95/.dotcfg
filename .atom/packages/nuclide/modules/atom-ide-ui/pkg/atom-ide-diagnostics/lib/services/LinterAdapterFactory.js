@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.createAdapters = createAdapters;
+exports.createAdapter = createAdapter;
 exports.validateLinter = validateLinter;
 
 var _LinterAdapter;
@@ -24,36 +24,17 @@ function _load_LinterAdapter() {
  * @format
  */
 
-function createSingleAdapter(provider) {
+function createAdapter(provider, busyReporter) {
   const validationErrors = validateLinter(provider);
   if (validationErrors.length === 0) {
-    return new (_LinterAdapter || _load_LinterAdapter()).LinterAdapter(provider);
+    return new (_LinterAdapter || _load_LinterAdapter()).LinterAdapter(provider, busyReporter);
   } else {
     const nameString = provider.name;
-    let message = `nuclide-diagnostics-store found problems with a linter${nameString}. ` + 'Diagnostic messages from that linter will be unavailable.\n';
+    let message = `nuclide-diagnostics-store found problems with the linter \`${nameString}\`. ` + 'Diagnostic messages from that linter will be unavailable.\n';
     message += validationErrors.map(error => `- ${error}\n`).join('');
     atom.notifications.addError(message, { dismissable: true });
     return null;
   }
-}
-
-function addSingleAdapter(adapters, provider) {
-  const adapter = createSingleAdapter(provider);
-  if (adapter) {
-    adapters.add(adapter);
-  }
-}
-
-function createAdapters(providers) {
-  const adapters = new Set();
-  if (Array.isArray(providers)) {
-    for (const provider of providers) {
-      addSingleAdapter(adapters, provider);
-    }
-  } else {
-    addSingleAdapter(adapters, providers);
-  }
-  return adapters;
 }
 
 function validateLinter(provider) {
@@ -74,6 +55,11 @@ function validateLinter(provider) {
     validate(provider.lint, 'lint function must be specified', errors);
     validate(typeof provider.lint === 'function', 'lint must be a function', errors);
 
+    // Older LinterV1 providers didn't have to provide a name.
+    // We'll tolerate this, since there's still a few out there.
+    if (provider.name == null) {
+      provider.name = 'Linter';
+    }
     validate(typeof provider.name === 'string', 'provider must have a name', errors);
   }
 

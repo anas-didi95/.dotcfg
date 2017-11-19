@@ -100,13 +100,13 @@ class Adb extends (_DebugBridge || _load_DebugBridge()).DebugBridge {
     });
   }
 
-  // Can't use kill, the only option is to use the package name
+  // In some android devices, we have to kill the package, not the process.
   // http://stackoverflow.com/questions/17154961/adb-shell-operation-not-permitted
-  stopPackage(packageName) {
+  stopProcess(packageName, pid) {
     var _this3 = this;
 
     return (0, _asyncToGenerator.default)(function* () {
-      yield _this3.runShortCommand('shell', 'am', 'force-stop', packageName).toPromise();
+      yield Promise.all([_this3.runShortCommand('shell', 'am', 'force-stop', packageName).toPromise(), _this3.runShortCommand('shell', 'kill', '-9', `${pid}`).toPromise(), _this3.runShortCommand('shell', 'run-as', packageName, 'kill', '-9', `${pid}`).toPromise()]);
     })();
   }
 
@@ -308,6 +308,13 @@ class Adb extends (_DebugBridge || _load_DebugBridge()).DebugBridge {
     const portArg = this._device.port != null ? ['-P', String(this._device.port)] : [];
     const deviceArg = this._device.name !== '' ? ['-s', this._device.name] : [];
     return deviceArg.concat(portArg);
+  }
+
+  getProcesses() {
+    return this.runShortCommand('shell', 'ps').map(stdout => stdout.split(/\n/).map(line => {
+      const info = line.trim().split(/\s+/);
+      return { user: info[0], pid: info[1], name: info[info.length - 1] };
+    }));
   }
 }
 exports.Adb = Adb; /**

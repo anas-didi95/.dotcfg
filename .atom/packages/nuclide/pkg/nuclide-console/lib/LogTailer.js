@@ -58,7 +58,8 @@ class LogTailer {
     this._startCount = 0;
     this._statuses = new _rxjsBundlesRxMinJs.BehaviorSubject('stopped');
 
-    this._messages = _rxjsBundlesRxMinJs.Observable.merge(messages, this._ready == null ? _rxjsBundlesRxMinJs.Observable.empty() : this._ready.ignoreElements()).do({
+    this._messages = _rxjsBundlesRxMinJs.Observable.merge(messages, this._ready == null ? _rxjsBundlesRxMinJs.Observable.empty() : this._ready.ignoreElements() // For the errors.
+    ).do({
       complete: () => {
         // If the process completed without ever entering the "running" state, invoke the
         // `onRunning` callback with a cancellation error.
@@ -120,7 +121,7 @@ class LogTailer {
   }
 
   stop() {
-    // If the process is explicitly stopped, call all of the running callbacks with a cancelation
+    // If the process is explicitly stopped, call all of the running callbacks with a cancellation
     // error.
     this._startCount = 0;
     this._runningCallbacks.forEach(cb => {

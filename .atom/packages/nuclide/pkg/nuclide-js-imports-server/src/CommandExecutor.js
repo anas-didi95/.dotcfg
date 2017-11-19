@@ -69,7 +69,7 @@ class CommandExecutor {
         return this._addImport(args);
       default:
         command;
-        throw new Error('Unexpected Command');
+        throw new Error(`Unexpected command ${command}`);
     }
   }
 
@@ -170,7 +170,7 @@ function getJSImport(node) {
   switch (node.type) {
     // const {X} = require('..');
     case 'VariableDeclaration':
-      if (node.kind === 'const' && node.declarations.length === 1) {
+      if (node.declarations.length === 1 && node.declarations[0].init != null) {
         const importPath = (0, (_util || _load_util()).getRequiredModule)(node.declarations[0].init);
         if (importPath != null) {
           return {

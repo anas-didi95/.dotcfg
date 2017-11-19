@@ -6,141 +6,176 @@ Object.defineProperty(exports, "__esModule", {
 
 var _asyncToGenerator = _interopRequireDefault(require('async-to-generator'));
 
+let main = (() => {
+  var _ref = (0, _asyncToGenerator.default)(function* () {
+    if (process.argv.length > 2 && process.argv[2] === '--child') {
+      return runChild();
+    }
+
+    setupDisconnectedParentHandler();
+    if (process.argv.length !== 3) {
+      logger.warn('Incorrect number of arguments');
+      return;
+    }
+    const root = process.argv[2];
+    const { hasteSettings } = (0, (_getConfig || _load_getConfig()).getConfigFromFlow)(root);
+
+    // Listen for open files that should be indexed immediately
+    setupParentMessagesHandler(root, hasteSettings);
+
+    // Listen for file changes with Watchman that should update the index.
+    watchDirectoryRecursively(root, hasteSettings);
+
+    // Build up the initial index with all files recursively from the root.
+    const index = yield (0, (_fileIndex || _load_fileIndex()).getFileIndex)(root, hasteSettings);
+    const newCache = new (_ExportCache || _load_ExportCache()).default({ root, hasteSettings });
+
+    disposables.add(_rxjsBundlesRxMinJs.Observable.merge(indexDirectory(index, hasteSettings), indexNodeModules(index)).subscribe(function (message) {
+      sendUpdatesBatched(message);
+      message.forEach(function (update) {
+        if (update.sha1 != null) {
+          newCache.set({ filePath: update.file, sha1: update.sha1 }, update.exports);
+        }
+      });
+    }, function (error) {
+      logger.error('Received error while indexing files', error);
+    }, function () {
+      newCache.save().then(function (success) {
+        if (success) {
+          logger.info(`Saved cache of size ${newCache.getByteSize()}`);
+        } else {
+          logger.warn(`Failed to save cache to ${newCache.getPath()}`);
+        }
+      });
+    }));
+  });
+
+  return function main() {
+    return _ref.apply(this, arguments);
+  };
+})();
+
+// Watches a directory for changes and reindexes files as needed.
+
+
 let handleFileChange = (() => {
-  var _ref = (0, _asyncToGenerator.default)(function* (root, fileChange) {
-    updatedFiles.add((_nuclideUri || _load_nuclideUri()).default.resolve(root, fileChange.name));
+  var _ref2 = (0, _asyncToGenerator.default)(function* (root, fileChange, hasteSettings) {
     if (fileChange.exists) {
       // File created or modified
-      const exportForFile = yield addFileToIndex(root, fileChange.name);
+      const exportForFile = yield getExportsForFileWithMain(fileChange.name, hasteSettings);
       if (exportForFile) {
-        sendExportUpdateToParent([exportForFile]);
+        sendUpdatesBatched([exportForFile]);
       }
     } else {
       // File deleted.
-      sendExportUpdateToParent([{
+      sendUpdatesBatched([{
         updateType: 'deleteExports',
-        file: (_nuclideUri || _load_nuclideUri()).default.resolve(root, fileChange.name),
+        file: fileChange.name,
         exports: []
       }]);
     }
   });
 
-  return function handleFileChange(_x, _x2) {
-    return _ref.apply(this, arguments);
-  };
-})();
-
-let listFilesWithWatchman = (() => {
-  var _ref2 = (0, _asyncToGenerator.default)(function* (root) {
-    const client = new (_main || _load_main()).WatchmanClient();
-    try {
-      return yield client.listFiles(root, getWatchmanSubscriptionOptions(root));
-    } finally {
-      client.dispose();
-    }
-  });
-
-  return function listFilesWithWatchman(_x3) {
+  return function handleFileChange(_x, _x2, _x3) {
     return _ref2.apply(this, arguments);
   };
 })();
 
+// Exported for testing purposes.
+
+
+/**
+ * Returns the directory of the nearest package.json if `file` matches the "main" field.
+ * This ensures that e.g. package/index.js can be imported as just "package".
+ */
 let checkIfMain = (() => {
-  var _ref3 = (0, _asyncToGenerator.default)(function* (file, readFileSync) {
-    let currDir = file;
-    while (true) {
-      const lastDir = currDir;
-      currDir = (_nuclideUri || _load_nuclideUri()).default.dirname(currDir);
-      if (lastDir === currDir) {
-        // We've reached the root '/'
-        return null;
-      }
-      const cachedMain = mainFilesCache.get(currDir);
-      if (cachedMain === null) {
-        // The directory doesn't have a package.json with a main.
-        continue;
-      }
-
-      if (
-      // flowlint-next-line sketchy-null-string:off
-      cachedMain && (_nuclideUri || _load_nuclideUri()).default.stripExtension(cachedMain) === (_nuclideUri || _load_nuclideUri()).default.stripExtension(file)) {
-        return currDir;
-      }
-      const packageJson = (_nuclideUri || _load_nuclideUri()).default.resolve(currDir, 'package.json');
-      try {
-        // Most of the time the file won't exist and the Promise should be rejected
-        // quickly, so it's probably more efficient to await in this loop instead of
-        // using Promise.all to queue up a promise for each directory in the file path.
-        const fileContents = readFileSync ? _fs.default.readFileSync(packageJson, 'utf8') : // eslint-disable-next-line no-await-in-loop
-        yield (_fsPromise || _load_fsPromise()).default.readFile(packageJson, 'utf8');
-
-        const mainFile = (_nuclideUri || _load_nuclideUri()).default.resolve(currDir, JSON.parse(fileContents).main || 'index.js');
-        mainFilesCache.set(currDir, mainFile);
-        const isMainFile = (_nuclideUri || _load_nuclideUri()).default.stripExtension(mainFile) === (_nuclideUri || _load_nuclideUri()).default.stripExtension(file);
-        return isMainFile ? currDir : null;
-      } catch (error) {
-        mainFilesCache.set(currDir, null);
-      }
-    }
-  });
-
-  return function checkIfMain(_x4, _x5) {
-    return _ref3.apply(this, arguments);
-  };
-})();
-
-let getExportsForFile = (() => {
   var _ref4 = (0, _asyncToGenerator.default)(function* (file) {
-    try {
-      const fileContents = yield (_fsPromise || _load_fsPromise()).default.readFile(file, 'utf8');
-      const ast = (0, (_AutoImportsManager || _load_AutoImportsManager()).parseFile)(fileContents);
-      if (ast == null) {
-        return null;
-      }
-      const exports = (0, (_ExportManager || _load_ExportManager()).getExportsFromAst)(file, ast);
-      return { file, exports, updateType: 'setExports' };
-    } catch (err) {
-      logger.warn(`Background process encountered error indexing ${file}:\n ${err}`);
-      return null;
-    }
+    const pkgJson = yield getPackageJson((_nuclideUri || _load_nuclideUri()).default.dirname(file));
+    return pkgJson != null && (_nuclideUri || _load_nuclideUri()).default.stripExtension(pkgJson.main) === (_nuclideUri || _load_nuclideUri()).default.stripExtension(file) ? pkgJson.dirname : null;
   });
 
-  return function getExportsForFile(_x6) {
+  return function checkIfMain(_x5) {
     return _ref4.apply(this, arguments);
   };
 })();
 
+let getExportsForFile = (() => {
+  var _ref5 = (0, _asyncToGenerator.default)(function* (file, hasteSettings, fileContents_) {
+    try {
+      const fileContents = fileContents_ != null ? fileContents_ : yield (_fsPromise || _load_fsPromise()).default.readFile(file, 'utf8');
+      const sha1 = _crypto.default.createHash('sha1').update(fileContents).digest('hex');
+      const update = {
+        updateType: 'setExports',
+        file,
+        sha1,
+        exports: []
+      };
+      const ast = (0, (_AutoImportsManager || _load_AutoImportsManager()).parseFile)(fileContents);
+      if (ast == null) {
+        return update;
+      }
+      const hasteName = (0, (_HasteUtils || _load_HasteUtils()).getHasteName)(file, ast, hasteSettings);
+      // TODO(hansonw): Support mixed-mode haste + non-haste imports.
+      // For now, if Haste is enabled, we'll only suggest Haste imports.
+      if (hasteSettings.isHaste && hasteName == null) {
+        return update;
+      }
+      const exports = (0, (_ExportManager || _load_ExportManager()).getExportsFromAst)(file, ast);
+      if (hasteName != null) {
+        exports.forEach(function (jsExport) {
+          jsExport.hasteName = hasteName;
+        });
+      }
+      return Object.assign({}, update, { exports });
+    } catch (err) {
+      logger.error(`Unexpected error indexing ${file}`, err);
+      return null;
+    }
+  });
+
+  return function getExportsForFile(_x6, _x7, _x8) {
+    return _ref5.apply(this, arguments);
+  };
+})();
+
 let handleNodeModule = (() => {
-  var _ref6 = (0, _asyncToGenerator.default)(function* (root, packageJsonFile) {
+  var _ref7 = (0, _asyncToGenerator.default)(function* (root, packageJsonFile, exportCache) {
     const file = (_nuclideUri || _load_nuclideUri()).default.join(root, packageJsonFile);
     try {
       const fileContents = yield (_fsPromise || _load_fsPromise()).default.readFile(file, 'utf8');
       const packageJson = JSON.parse(fileContents);
       const entryPoint = require.resolve((_nuclideUri || _load_nuclideUri()).default.join((_nuclideUri || _load_nuclideUri()).default.dirname(file), packageJson.main || ''));
-      const update = yield getExportsForFile(entryPoint);
+      const entryContents = yield (_fsPromise || _load_fsPromise()).default.readFile(entryPoint, 'utf8');
+      const sha1 = _crypto.default.createHash('sha1').update(entryContents).digest('hex');
+      const cachedUpdate = exportCache.get({ filePath: entryPoint, sha1 });
+      if (cachedUpdate != null) {
+        return {
+          updateType: 'setExports',
+          file: entryPoint,
+          sha1,
+          exports: cachedUpdate
+        };
+      }
+      // TODO(hansonw): How do we handle haste modules inside Node modules?
+      // For now we'll just treat them as usual.
+      const update = yield getExportsForFile(entryPoint, {
+        isHaste: false,
+        useNameReducers: false,
+        nameReducers: [],
+        nameReducerBlacklist: [],
+        nameReducerWhitelist: []
+      }, entryContents);
       return update ? decorateExportUpdateWithMainDirectory(update, (_nuclideUri || _load_nuclideUri()).default.join(root, (_nuclideUri || _load_nuclideUri()).default.dirname(packageJsonFile))) : update;
     } catch (error) {
       // Some modules just can't be required; that's perfectly normal.
       if (error.code !== 'MODULE_NOT_FOUND') {
-        logger.debug(`Couldn't index ${file}`, error);
+        logger.warn(`Couldn't index ${file}`, error);
       }
       return null;
     }
   });
 
-  return function handleNodeModule(_x8, _x9) {
-    return _ref6.apply(this, arguments);
-  };
-})();
-
-let sendExportUpdateToParent = (() => {
-  var _ref7 = (0, _asyncToGenerator.default)(function* (exportsForFiles) {
-    return send(exportsForFiles.filter(function (exportsForFile) {
-      return exportsForFile.updateType !== 'setExports' || exportsForFile.exports.length > 0;
-    }));
-  });
-
-  return function sendExportUpdateToParent(_x10) {
+  return function handleNodeModule(_x10, _x11, _x12) {
     return _ref7.apply(this, arguments);
   };
 })();
@@ -160,7 +195,7 @@ let send = (() => {
     }
   });
 
-  return function send(_x11) {
+  return function send(_x13) {
     return _ref8.apply(this, arguments);
   };
 })();
@@ -168,9 +203,21 @@ let send = (() => {
 exports.indexDirectory = indexDirectory;
 exports.indexNodeModules = indexNodeModules;
 
-var _os = _interopRequireDefault(require('os'));
+var _crypto = _interopRequireDefault(require('crypto'));
 
-var _fs = _interopRequireDefault(require('fs'));
+var _lodash;
+
+function _load_lodash() {
+  return _lodash = _interopRequireDefault(require('lodash.memoize'));
+}
+
+var _log4js;
+
+function _load_log4js() {
+  return _log4js = _interopRequireDefault(require('log4js'));
+}
+
+var _os = _interopRequireDefault(require('os'));
 
 var _fsPromise;
 
@@ -182,6 +229,18 @@ var _nuclideUri;
 
 function _load_nuclideUri() {
   return _nuclideUri = _interopRequireDefault(require('nuclide-commons/nuclideUri'));
+}
+
+var _observable;
+
+function _load_observable() {
+  return _observable = require('nuclide-commons/observable');
+}
+
+var _ExportCache;
+
+function _load_ExportCache() {
+  return _ExportCache = _interopRequireDefault(require('./ExportCache'));
 }
 
 var _ExportManager;
@@ -204,12 +263,6 @@ function _load_initializeLogging() {
   return _initializeLogging = require('../../logging/initializeLogging');
 }
 
-var _main;
-
-function _load_main() {
-  return _main = require('../../../nuclide-watchman-helpers/lib/main');
-}
-
 var _UniversalDisposable;
 
 function _load_UniversalDisposable() {
@@ -222,181 +275,153 @@ function _load_getConfig() {
   return _getConfig = require('../getConfig');
 }
 
-var _Settings;
-
-function _load_Settings() {
-  return _Settings = require('../Settings');
-}
-
 var _nice;
 
 function _load_nice() {
   return _nice = require('nuclide-commons/nice');
 }
 
+var _HasteUtils;
+
+function _load_HasteUtils() {
+  return _HasteUtils = require('./HasteUtils');
+}
+
+var _fileIndex;
+
+function _load_fileIndex() {
+  return _fileIndex = require('./file-index');
+}
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-// TODO(seansegal) Change 'DEBUG' to 'WARN' when development is complete
-const logger = (0, (_initializeLogging || _load_initializeLogging()).initializeLoggerForWorker)('DEBUG');
+(0, (_initializeLogging || _load_initializeLogging()).initializeLoggerForWorker)(); /**
+                                                                                     * Copyright (c) 2015-present, Facebook, Inc.
+                                                                                     * All rights reserved.
+                                                                                     *
+                                                                                     * This source code is licensed under the license found in the LICENSE file in
+                                                                                     * the root directory of this source tree.
+                                                                                     *
+                                                                                     * 
+                                                                                     * @format
+                                                                                     */
 
-// TODO: index the entry points of node_modules
-/**
- * Copyright (c) 2015-present, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the license found in the LICENSE file in
- * the root directory of this source tree.
- *
- * 
- * @format
- */
-
-const TO_IGNORE = ['**/node_modules/**', '**/VendorLib/**', '**/flow-typed/**'];
-let toIgnoreRegex = '';
+const logger = (_log4js || _load_log4js()).default.getLogger('js-imports-worker');
 
 const CONCURRENCY = 1;
 
+// A bug in Node <= 7.4.0 makes IPC communication O(N^2).
+// For this reason, it's very important to send updates in smaller batches.
 const BATCH_SIZE = 500;
 
+const MAX_WORKERS = Math.round(_os.default.cpus().length / 2);
 const MIN_FILES_PER_WORKER = 100;
 
 const disposables = new (_UniversalDisposable || _load_UniversalDisposable()).default();
-const updatedFiles = new Set();
 
-// Directory ==> Main File. Null indicates no package.json file.
-const mainFilesCache = new Map();
-
-function main() {
-  if (process.argv.length > 2 && process.argv[2] === '--child') {
-    return runChild();
-  }
-
-  setupDisconnectedParentHandler();
-  if (process.argv.length !== 3) {
-    logger.warn('Incorrect number of arguments');
-    return;
-  }
-  const root = process.argv[2];
-  const { hasteSettings } = (0, (_getConfig || _load_getConfig()).getConfigFromFlow)(root);
-  const shouldIndexDefaultExportForEachFile = hasteSettings.isHaste && (_Settings || _load_Settings()).Settings.hasteSettings.shouldAddAllFilesAsDefaultExport;
-
-  toIgnoreRegex = hasteSettings.blacklistedDirs.join('|');
-
-  // Listen for open files that should be indexed immediately
-  setupParentMessagesHandler();
-
-  // Listen for file changes with Watchman that should update the index.
-  watchDirectoryRecursively(root);
-
-  // Build up the initial index with all files recursively from the root.
-  indexDirectoryAndSendExportsToParent(root, shouldIndexDefaultExportForEachFile).then(() => {
-    if ((_Settings || _load_Settings()).Settings.indexNodeModulesWhiteList.find(regex => regex.test(root))) {
-      logger.debug('Indexing node modules.');
-      return indexNodeModulesAndSendToParent(root);
-    }
-  });
+function watchDirectoryRecursively(root, hasteSettings) {
+  disposables.add((0, (_fileIndex || _load_fileIndex()).watchDirectory)(root).mergeMap(fileChange => handleFileChange(root, fileChange, hasteSettings), CONCURRENCY).subscribe(() => {}, error => {
+    logger.error(`Failed to watch ${root}`, error);
+  }));
 }
 
-// Function should be called once when the server is initialized.
-function indexDirectoryAndSendExportsToParent(root, shouldIndexDefaultExportForEachFile) {
-  return new Promise((resolve, reject) => {
-    indexDirectory(root, shouldIndexDefaultExportForEachFile).subscribe({
-      next: exportForFile => {
-        sendExportUpdateToParent(exportForFile);
-      },
-      error: err => {
-        logger.error('Encountered error in AutoImportsWorker', err);
-        return reject(err);
-      },
-      complete: () => {
-        logger.info(`Finished indexing ${root}`);
-        return resolve();
+function indexDirectory({ root, exportCache, jsFiles, mainFiles }, hasteSettings, maxWorkers = MAX_WORKERS) {
+  let cachedUpdates = [];
+  const files = [];
+  jsFiles.forEach(({ name, sha1 }) => {
+    const filePath = (_nuclideUri || _load_nuclideUri()).default.join(root, name);
+    if (sha1 != null) {
+      const cached = exportCache.get({ filePath, sha1 });
+      if (cached != null) {
+        cachedUpdates.push({
+          updateType: 'setExports',
+          file: filePath,
+          sha1,
+          exports: cached
+        });
+        return;
+      }
+    }
+    files.push(name);
+  });
+  // To get faster results, we can send up the Haste reduced names as a default export.
+  if (hasteSettings.isHaste && hasteSettings.useNameReducers) {
+    cachedUpdates = cachedUpdates.concat(getHasteNames(root, files, hasteSettings));
+  }
+  logger.info(`Indexing ${files.length} files`);
+  // As an optimization, shuffle the files so that the work is well distributed.
+  shuffle(files);
+  const numWorkers = Math.min(Math.max(1, Math.floor(files.length / MIN_FILES_PER_WORKER)), maxWorkers);
+  const filesPerWorker = Math.ceil(files.length / numWorkers);
+  const workerMessages = _rxjsBundlesRxMinJs.Observable.range(0, numWorkers).mergeMap(workerId => {
+    return (0, (_nice || _load_nice()).niceSafeSpawn)(process.execPath, [(_nuclideUri || _load_nuclideUri()).default.join(__dirname, 'AutoImportsWorker-entry.js'), '--child', root], {
+      stdio: ['inherit', 'inherit', 'inherit', 'ipc']
+    });
+  }).mergeMap((worker, workerId) => {
+    if (!(typeof workerId === 'number')) {
+      throw new Error('Invariant violation: "typeof workerId === \'number\'"');
+    } // For Flow
+
+
+    const updateStream = _rxjsBundlesRxMinJs.Observable.fromEvent(worker, 'message').takeUntil(_rxjsBundlesRxMinJs.Observable.fromEvent(worker, 'error').do(error => {
+      logger.warn(`Worker ${workerId} had received ${error}`);
+    })).takeUntil(_rxjsBundlesRxMinJs.Observable.fromEvent(worker, 'exit').do(() => {
+      logger.debug(`Worker ${workerId} terminated.`);
+    }));
+    return _rxjsBundlesRxMinJs.Observable.merge(updateStream, _rxjsBundlesRxMinJs.Observable.timer(0).do(() => {
+      worker.send({
+        files: files.slice(workerId * filesPerWorker, Math.min((workerId + 1) * filesPerWorker, files.length))
+      });
+    }).ignoreElements());
+  }).map(message => {
+    // Inject the main files at this point, since we have a list of all map files.
+    // This could be pure but it's just not worth the cost.
+    message.forEach(update => {
+      const mainDir = mainFiles.get(update.file);
+      if (mainDir != null) {
+        decorateExportUpdateWithMainDirectory(update, mainDir);
       }
     });
+    return message;
   });
+
+  return _rxjsBundlesRxMinJs.Observable.of(cachedUpdates).concat(workerMessages);
 }
 
-// Watches a directory for changes and reindexes files as needed.
-function watchDirectoryRecursively(root) {
-  logger.debug('Watching the directory', root);
-  const watchmanClient = new (_main || _load_main()).WatchmanClient();
-  disposables.add(watchmanClient);
-  watchmanClient.watchDirectoryRecursive(root, 'js-imports-subscription', getWatchmanSubscriptionOptions(root)).then(watchmanSubscription => {
-    disposables.add(watchmanSubscription);
-    const watchmanRoot = watchmanSubscription.root;
-    _rxjsBundlesRxMinJs.Observable.fromEvent(watchmanSubscription, 'change').switchMap(x => _rxjsBundlesRxMinJs.Observable.from(x)) // convert to Observable<FileChange>
-    .mergeMap(fileChange => handleFileChange(watchmanRoot, fileChange), CONCURRENCY).subscribe(() => {});
-  }).catch(error => {
-    logger.error(error);
-  });
-}
-
-function listFilesWithGlob(root) {
-  return (_fsPromise || _load_fsPromise()).default.glob('**/*.js', {
-    cwd: root,
-    ignore: TO_IGNORE
-  });
-}
-
-function listNodeModulesWithGlob(root) {
-  return (_fsPromise || _load_fsPromise()).default.glob('node_modules/*/package.json', {
-    cwd: root
-  });
-}
-
-// Exported for testing purposes.
-function indexDirectory(root, shouldIndexDefaultExportForEachFile, maxWorkers = Math.round(_os.default.cpus().length / 2)) {
-  return _rxjsBundlesRxMinJs.Observable.fromPromise(listFilesWithWatchman(root).catch(() => listFilesWithGlob(root))).map(files =>
-  // Filter out blacklisted files
-  files.filter(file => toIgnoreRegex.length === 0 || !(_nuclideUri || _load_nuclideUri()).default.join(root, file).match(toIgnoreRegex))).do(files => {
-    logger.info(`Indexing ${files.length} files`);
-  }).do(files => {
-    if (shouldIndexDefaultExportForEachFile) {
-      logger.debug('Adding all files');
-      addDefaultExportForEachFile(root, files);
-      logger.debug('Sent all files');
+const getPackageJson = (0, (_lodash || _load_lodash()).default)((() => {
+  var _ref3 = (0, _asyncToGenerator.default)(function* (dir) {
+    // Bail out at the FS root.
+    const parent = (_nuclideUri || _load_nuclideUri()).default.dirname(dir);
+    if (parent === dir) {
+      return null;
     }
-  }).switchMap(files => {
-    // As an optimization, shuffle the files so that the work is well distributed.
-    shuffle(files);
-    const numWorkers = Math.min(Math.max(1, Math.floor(files.length / MIN_FILES_PER_WORKER)), maxWorkers);
-    const filesPerWorker = Math.floor(files.length / numWorkers);
-    // $FlowIgnore TODO: add Observable.range to flow-typed
-    return _rxjsBundlesRxMinJs.Observable.range(0, numWorkers).mergeMap(workerId => {
-      return (0, (_nice || _load_nice()).niceSafeSpawn)(process.execPath, [(_nuclideUri || _load_nuclideUri()).default.join(__dirname, 'AutoImportsWorker-entry.js'), '--child', root, shouldIndexDefaultExportForEachFile ? 'true' : 'false'], {
-        stdio: ['inherit', 'inherit', 'inherit', 'ipc']
-      });
-    }).mergeMap((worker, workerId) => {
-      if (!(typeof workerId === 'number')) {
-        throw new Error('Invariant violation: "typeof workerId === \'number\'"');
-      } // For Flow
 
-
-      const updateStream = _rxjsBundlesRxMinJs.Observable.fromEvent(worker, 'message').takeUntil(_rxjsBundlesRxMinJs.Observable.fromEvent(worker, 'error').do(error => {
-        logger.debug(`Worker ${workerId} had received ${error}`);
-      })).takeUntil(_rxjsBundlesRxMinJs.Observable.fromEvent(worker, 'exit').do(() => {
-        logger.debug(`Worker ${workerId} terminated.`);
-      }));
-      return _rxjsBundlesRxMinJs.Observable.merge(updateStream, _rxjsBundlesRxMinJs.Observable.timer(0).do(() => {
-        worker.send({
-          files: files.slice(workerId * filesPerWorker, Math.min((workerId + 1) * filesPerWorker, files.length))
-        });
-      }).ignoreElements());
-    });
+    const packageJson = (_nuclideUri || _load_nuclideUri()).default.join(dir, 'package.json');
+    let fileContents;
+    try {
+      fileContents = yield (_fsPromise || _load_fsPromise()).default.readFile(packageJson, 'utf8');
+    } catch (err) {
+      return getPackageJson(parent);
+    }
+    try {
+      return {
+        dirname: dir,
+        main: (_nuclideUri || _load_nuclideUri()).default.resolve(dir, JSON.parse(fileContents).main || 'index.js')
+      };
+    } catch (err) {
+      return null;
+    }
   });
-}
 
-function addFileToIndex(root, fileRelative) {
-  const file = (_nuclideUri || _load_nuclideUri()).default.join(root, fileRelative);
-  return Promise.all([getExportsForFile(file), checkIfMain(file)]).then(([data, directoryForMainFile]) => {
+  return function (_x4) {
+    return _ref3.apply(this, arguments);
+  };
+})());
+
+function getExportsForFileWithMain(path, hasteSettings, fileContents) {
+  return Promise.all([getExportsForFile(path, hasteSettings, fileContents), checkIfMain(path)]).then(([data, directoryForMainFile]) => {
     return data ? decorateExportUpdateWithMainDirectory(data, directoryForMainFile) : null;
   });
-}
-
-function getWatchmanSubscriptionOptions(root) {
-  return {
-    expression: ['allof', ['match', '*.js'], ...getWatchmanMatchesFromIgnoredFiles()]
-  };
 }
 
 function setupDisconnectedParentHandler() {
@@ -406,115 +431,96 @@ function setupDisconnectedParentHandler() {
   });
 }
 
-function setupParentMessagesHandler() {
+function setupParentMessagesHandler(root, hasteSettings) {
   process.on('message', (() => {
-    var _ref5 = (0, _asyncToGenerator.default)(function* (message) {
+    var _ref6 = (0, _asyncToGenerator.default)(function* (message) {
       const { fileUri, fileContents } = message;
       if (fileUri == null || fileContents == null) {
         logger.warn('AutoImportsWorker received a message from parent without a fileUri or fileContents');
         return;
       }
       try {
-        const ast = (0, (_AutoImportsManager || _load_AutoImportsManager()).parseFile)(fileContents);
-        if (ast == null) {
-          return null;
+        const exportUpdate = yield getExportsForFileWithMain(fileUri, hasteSettings, fileContents);
+        if (exportUpdate != null) {
+          sendUpdatesBatched([exportUpdate]);
         }
-        updatedFiles.add(fileUri);
-        sendExportUpdateToParent([decorateExportUpdateWithMainDirectory({
-          file: fileUri,
-          exports: (0, (_ExportManager || _load_ExportManager()).getExportsFromAst)(fileUri, ast),
-          updateType: 'setExports'
-        }, (yield checkIfMain(fileUri, /* readFileSync */true)))]);
       } catch (error) {
         logger.error(`Could not index file ${fileUri}. Error: ${error}`);
       }
     });
 
-    return function (_x7) {
-      return _ref5.apply(this, arguments);
+    return function (_x9) {
+      return _ref6.apply(this, arguments);
     };
   })());
 }
 
-function addDefaultExportForEachFile(root, files) {
-  sendExportUpdateToParent(files.map(file => {
+function getHasteNames(root, files, hasteSettings) {
+  return files.map(file => {
+    const hasteName = (0, (_HasteUtils || _load_HasteUtils()).hasteReduceName)(file, hasteSettings);
+    if (hasteName == null) {
+      return null;
+    }
     return {
       file,
       updateType: 'setExports',
       exports: [{
-        id: (0, (_ExportManager || _load_ExportManager()).idFromFileName)(file),
+        id: (0, (_ExportManager || _load_ExportManager()).idFromFileName)(hasteName),
         uri: (_nuclideUri || _load_nuclideUri()).default.join(root, file),
+        line: 1,
+        hasteName,
         isTypeExport: false,
         isDefault: true
       }]
     };
-  }));
+  }).filter(Boolean);
 }
-function indexNodeModulesAndSendToParent(root) {
-  return new Promise((resolve, reject) => {
-    indexNodeModules(root).subscribe({
-      next: exportForFile => {
-        if (exportForFile) {
-          sendExportUpdateToParent([exportForFile]);
-        }
-      },
-      error: err => {
-        logger.error('Encountered error in AutoImportsWorker', err);
-        return reject(err);
-      },
-      complete: () => {
-        logger.debug(`Finished node modules for ${root}`);
-        return resolve();
-      }
-    });
-  });
-}
-
-function indexNodeModules(root) {
-  return _rxjsBundlesRxMinJs.Observable.fromPromise(
-  // TODO: Use Watchman for better performance.
-  listNodeModulesWithGlob(root)).switchMap(x => _rxjsBundlesRxMinJs.Observable.from(x)) // convert to Observable<string>
-  .mergeMap(file => handleNodeModule(root, file), CONCURRENCY);
+function indexNodeModules({
+  root,
+  exportCache,
+  nodeModulesPackageJsonFiles
+}) {
+  return _rxjsBundlesRxMinJs.Observable.from(nodeModulesPackageJsonFiles).mergeMap(file => handleNodeModule(root, file, exportCache), MAX_WORKERS).let((_observable || _load_observable()).compact).bufferCount(BATCH_SIZE);
 }
 
 function decorateExportUpdateWithMainDirectory(update, directoryForMainFile) {
-  // flowlint-next-line sketchy-null-string:off
-  if (directoryForMainFile) {
+  if (update.exports.length > 0 && directoryForMainFile !== update.exports[0].directoryForMainFile) {
     update.exports = update.exports.map(exp => {
-      return Object.assign({}, exp, { directoryForMainFile });
+      if (directoryForMainFile == null) {
+        delete exp.directoryForMainFile;
+        return exp;
+      } else {
+        return Object.assign({}, exp, { directoryForMainFile });
+      }
     });
   }
   return update;
 }
 
-function getWatchmanMatchesFromIgnoredFiles() {
-  return TO_IGNORE.map(patternToIgnore => {
-    return ['not', ['match', patternToIgnore, 'wholename', { includedotfiles: true }]];
-  });
+function sendUpdatesBatched(exportsForFiles) {
+  for (let i = 0; i < exportsForFiles.length; i += BATCH_SIZE) {
+    send(exportsForFiles.slice(i, i + BATCH_SIZE));
+  }
 }
 
 function runChild() {
   const SEND_CONCURRENCY = 10;
 
   setupDisconnectedParentHandler();
-  if (process.argv.length !== 5) {
-    logger.debug('Child started with incorrect number of arguments');
+  if (process.argv.length !== 4) {
+    logger.error('Child started with incorrect number of arguments');
     return;
   }
   const root = process.argv[3];
-  const shouldAddAllFilesAsDefaultExport = process.argv[4] === 'true';
+  const { hasteSettings } = (0, (_getConfig || _load_getConfig()).getConfigFromFlow)(root);
   process.on('message', message => {
     const { files } = message;
     _rxjsBundlesRxMinJs.Observable.from(files).concatMap((file, index) => {
-      return addFileToIndex(root, file);
-    }).filter(exportForFile => exportForFile != null && (!shouldAddAllFilesAsDefaultExport || !isOnlyDefaultExportForFile(exportForFile.exports)))
-    // $FlowIgnore TODO: Add .bufferCount to rxjs flow-typed
-    .bufferCount(BATCH_SIZE).mergeMap(sendExportUpdateToParent, SEND_CONCURRENCY).subscribe({ complete: exitCleanly });
+      // Note that we explicitly skip the main check here.
+      // The parent process has a index of main files which is more efficient!
+      return getExportsForFile((_nuclideUri || _load_nuclideUri()).default.join(root, file), hasteSettings);
+    }).let((_observable || _load_observable()).compact).bufferCount(BATCH_SIZE).mergeMap(send, SEND_CONCURRENCY).subscribe({ complete: exitCleanly });
   });
-}
-
-function isOnlyDefaultExportForFile(exportsForFile) {
-  return exportsForFile.length === 1 && exportsForFile[0].isDefault && !exportsForFile[0].isTypeExport && exportsForFile[0].id === (0, (_ExportManager || _load_ExportManager()).idFromFileName)(exportsForFile[0].uri);
 }
 
 function shuffle(array) {

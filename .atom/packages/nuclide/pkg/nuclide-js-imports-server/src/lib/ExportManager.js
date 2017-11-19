@@ -37,28 +37,20 @@ function _load_nuclideUri() {
   return _nuclideUri = _interopRequireDefault(require('nuclide-commons/nuclideUri'));
 }
 
-var _Settings;
-
-function _load_Settings() {
-  return _Settings = require('../Settings');
-}
-
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
-/**
- * Copyright (c) 2015-present, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the license found in the LICENSE file in
- * the root directory of this source tree.
- *
- * 
- * @format
- */
-
-const logger = (0, (_log4js || _load_log4js()).getLogger)();
+const logger = (0, (_log4js || _load_log4js()).getLogger)(); /**
+                                                              * Copyright (c) 2015-present, Facebook, Inc.
+                                                              * All rights reserved.
+                                                              *
+                                                              * This source code is licensed under the license found in the LICENSE file in
+                                                              * the root directory of this source tree.
+                                                              *
+                                                              * 
+                                                              * @format
+                                                              */
 
 function getExportsFromAst(fileUri, ast) {
   const exports = [];
@@ -120,7 +112,13 @@ function addDefaultDeclarationToExportIndex(node, fileUri, exportIndex) {
     // (ex: export default {someObject, otherObject})
     // Assume the id will be the name of the file.
     const id = idFromFileName(fileUri);
-    exportIndex.push({ id, uri: fileUri, isDefault, isTypeExport });
+    exportIndex.push({
+      id,
+      uri: fileUri,
+      line: node.loc.start.line,
+      isDefault,
+      isTypeExport
+    });
     return;
   }
 
@@ -152,59 +150,61 @@ function specifierToExport(node, fileUri, isTypeExport, isDefault) {
   return {
     id: node.exported.name,
     uri: fileUri,
+    line: node.loc.start.line,
     isTypeExport,
     isDefault
   };
 }
 
 function expressionToExports(expression, isTypeExport, fileUri) {
-  if (expression.id || expression.name) {
-    return [{
-      id: expression.name || expression.id.name,
+  // Index the entire 'module.exports' as a default export.
+  const defaultId = idFromFileName(fileUri);
+  const result = [{
+    id: defaultId,
+    uri: fileUri,
+    line: expression.loc.start.line,
+    type: 'ObjectExpression',
+    isTypeExport,
+    isDefault: true
+  }];
+
+  const ident = expression.id != null ? expression.id.name : expression.name;
+  if (ident && ident !== defaultId) {
+    result.push({
+      id: ident,
       uri: fileUri,
+      line: expression.loc.start.line,
       type: expression.type,
       isTypeExport,
-      isDefault: true }];
-  }
-  if ((_babelTypes || _load_babelTypes()).isObjectExpression(expression)) {
-    const {
-      shouldIndexObjectAsDefault,
-      shouldIndexEachObjectProperty
-    } = (_Settings || _load_Settings()).Settings.moduleExportsSettings;
-
-    // Index the entire object as a default export
-    const defaultExport = shouldIndexObjectAsDefault ? [{
-      id: idFromFileName(fileUri),
-      uri: fileUri,
-      type: 'ObjectExpression',
-      isTypeExport,
-      isDefault: true }] : [];
-
+      isDefault: true // Treated as default export
+    });
+  } else if ((_babelTypes || _load_babelTypes()).isObjectExpression(expression)) {
     // Index each property of the object
-    const propertyExports = shouldIndexEachObjectProperty ? (0, (_collection || _load_collection()).arrayCompact)(expression.properties.map(property => {
+    const propertyExports = (0, (_collection || _load_collection()).arrayCompact)(expression.properties.map(property => {
       if (property.type === 'SpreadProperty' || property.computed) {
         return null;
       }
       return {
         id: property.key.type === 'StringLiteral' ? property.key.value : property.key.name,
         uri: fileUri,
+        line: property.key.loc.start.line,
         type: expression.type,
         isTypeExport,
         isDefault: false
       };
-    })) : [];
-
-    return defaultExport.concat(propertyExports);
-  }
-  if ((_babelTypes || _load_babelTypes()).isAssignmentExpression(expression) && (_babelTypes || _load_babelTypes()).isIdentifier(expression.left)) {
-    return [{
+    }));
+    return result.concat(propertyExports);
+  } else if ((_babelTypes || _load_babelTypes()).isAssignmentExpression(expression) && (_babelTypes || _load_babelTypes()).isIdentifier(expression.left) && expression.left.name !== defaultId) {
+    result.push({
       id: expression.left.name,
       uri: fileUri,
-      type: expression.type,
+      line: expression.left.loc.start.line,
+      type: expression.right.type,
       isTypeExport,
-      isDefault: true }];
+      isDefault: true // Treated as default export
+    });
   }
-  return [];
+  return result;
 }
 
 function declarationToExport(declaration, isTypeExport, fileUri, isDefault) {
@@ -213,6 +213,7 @@ function declarationToExport(declaration, isTypeExport, fileUri, isDefault) {
     return [{
       id: declaration.name || declaration.id.name,
       uri: fileUri,
+      line: declaration.loc.start.line,
       type: declaration.type,
       isTypeExport,
       isDefault
@@ -227,6 +228,7 @@ function declarationToExport(declaration, isTypeExport, fileUri, isDefault) {
       return {
         id: decl.id.name,
         uri: fileUri,
+        line: decl.id.loc.start.line,
         type: declaration.type,
         isTypeExport,
         isDefault
@@ -238,6 +240,7 @@ function declarationToExport(declaration, isTypeExport, fileUri, isDefault) {
     return [{
       id: idFromFileName(fileUri),
       uri: fileUri,
+      line: declaration.loc.start.line,
       isTypeExport: false,
       type: declaration.type,
       isDefault
@@ -268,6 +271,7 @@ function traverseTreeAndIndexExports(ast, fileUri, exportIndex) {
               exportIndex.push({
                 id: left.property.name,
                 uri: fileUri,
+                line: left.property.loc.start.line,
                 type:
                 // Exclude easy cases from being imported as types.
                 right.type === 'ObjectExpression' || right.type === 'FunctionExpression' || right.type === 'NumericLiteral' || right.type === 'StringLiteral' ? right.type : undefined,

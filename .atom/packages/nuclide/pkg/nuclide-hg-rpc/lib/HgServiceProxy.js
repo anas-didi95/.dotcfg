@@ -20,7 +20,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })]).then(([args, id]) => _client.callRemoteMethod(id, "waitForWatchmanSubscriptions", "promise", args)).then(value => {
@@ -44,7 +44,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })])).switchMap(([args, id]) => _client.callRemoteMethod(id, "fetchStatuses", "observable", args)).concatMap(value => {
@@ -68,7 +68,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })])).switchMap(([args, id]) => _client.callRemoteMethod(id, "fetchStackStatuses", "observable", args)).concatMap(value => {
@@ -92,7 +92,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })])).switchMap(([args, id]) => _client.callRemoteMethod(id, "fetchHeadStatuses", "observable", args)).concatMap(value => {
@@ -110,13 +110,39 @@ module.exports = _client => {
       }).publish();
     }
 
+    getAdditionalLogFiles(arg0) {
+      return Promise.all([_client.marshalArguments(Array.from(arguments), [{
+        name: "deadline",
+        type: {
+          kind: "named",
+          name: "DeadlineRequest"
+        }
+      }]), _client.marshal(this, {
+        kind: "named",
+        location: {
+          type: "source",
+          fileName: "HgService.js",
+          line: 308
+        },
+        name: "HgService"
+      })]).then(([args, id]) => _client.callRemoteMethod(id, "getAdditionalLogFiles", "promise", args)).then(value => {
+        return _client.unmarshal(value, {
+          kind: "array",
+          type: {
+            kind: "named",
+            name: "AdditionalLogFile"
+          }
+        });
+      });
+    }
+
     observeFilesDidChange() {
       return Observable.fromPromise(Promise.all([_client.marshalArguments(Array.from(arguments), []), _client.marshal(this, {
         kind: "named",
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })])).switchMap(([args, id]) => _client.callRemoteMethod(id, "observeFilesDidChange", "observable", args)).concatMap(value => {
@@ -136,7 +162,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })])).switchMap(([args, id]) => _client.callRemoteMethod(id, "observeHgCommitsDidChange", "observable", args)).concatMap(value => {
@@ -152,7 +178,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })])).switchMap(([args, id]) => _client.callRemoteMethod(id, "observeHgRepoStateDidChange", "observable", args)).concatMap(value => {
@@ -168,7 +194,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })])).switchMap(([args, id]) => _client.callRemoteMethod(id, "observeHgConflictStateDidChange", "observable", args)).concatMap(value => {
@@ -184,7 +210,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })])).switchMap(([args, id]) => _client.callRemoteMethod(id, "observeHgOperationProgressDidChange", "observable", args)).concatMap(value => {
@@ -210,7 +236,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })]).then(([args, id]) => _client.callRemoteMethod(id, "fetchDiffInfo", "promise", args)).then(value => {
@@ -250,7 +276,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })]).then(([args, id]) => _client.callRemoteMethod(id, "createBookmark", "promise", args)).then(value => {
@@ -271,7 +297,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })]).then(([args, id]) => _client.callRemoteMethod(id, "deleteBookmark", "promise", args)).then(value => {
@@ -297,7 +323,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })]).then(([args, id]) => _client.callRemoteMethod(id, "renameBookmark", "promise", args)).then(value => {
@@ -313,7 +339,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })]).then(([args, id]) => _client.callRemoteMethod(id, "fetchActiveBookmark", "promise", args)).then(value => {
@@ -329,7 +355,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })])).switchMap(([args, id]) => _client.callRemoteMethod(id, "fetchBookmarks", "observable", args)).concatMap(value => {
@@ -349,7 +375,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })])).switchMap(([args, id]) => _client.callRemoteMethod(id, "observeActiveBookmarkDidChange", "observable", args)).concatMap(value => {
@@ -365,7 +391,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })])).switchMap(([args, id]) => _client.callRemoteMethod(id, "observeBookmarksDidChange", "observable", args)).concatMap(value => {
@@ -392,7 +418,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })])).switchMap(([args, id]) => _client.callRemoteMethod(id, "fetchFileContentAtRevision", "observable", args)).concatMap(value => {
@@ -413,7 +439,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })])).switchMap(([args, id]) => _client.callRemoteMethod(id, "fetchFilesChangedAtRevision", "observable", args)).concatMap(value => {
@@ -430,7 +456,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })]).then(([args, id]) => _client.callRemoteMethod(id, "fetchRevisionInfoBetweenHeadAndBase", "promise", args)).then(value => {
@@ -450,7 +476,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })])).switchMap(([args, id]) => _client.callRemoteMethod(id, "fetchSmartlogRevisions", "observable", args)).concatMap(value => {
@@ -470,7 +496,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })]).then(([args, id]) => _client.callRemoteMethod(id, "getBaseRevision", "promise", args)).then(value => {
@@ -493,7 +519,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })]).then(([args, id]) => _client.callRemoteMethod(id, "getBlameAtHead", "promise", args)).then(value => {
@@ -521,7 +547,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })]).then(([args, id]) => _client.callRemoteMethod(id, "getConfigValueAsync", "promise", args)).then(value => {
@@ -545,7 +571,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })]).then(([args, id]) => _client.callRemoteMethod(id, "getDifferentialRevisionForChangeSetId", "promise", args)).then(value => {
@@ -574,7 +600,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })]).then(([args, id]) => _client.callRemoteMethod(id, "getSmartlog", "promise", args)).then(value => {
@@ -608,7 +634,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })])).switchMap(([args, id]) => _client.callRemoteMethod(id, "commit", "observable", args)).concatMap(value => {
@@ -635,7 +661,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })])).switchMap(([args, id]) => _client.callRemoteMethod(id, "editCommitMessage", "observable", args)).concatMap(value => {
@@ -678,7 +704,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })])).switchMap(([args, id]) => _client.callRemoteMethod(id, "amend", "observable", args)).concatMap(value => {
@@ -695,7 +721,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })])).switchMap(([args, id]) => _client.callRemoteMethod(id, "restack", "observable", args)).concatMap(value => {
@@ -712,7 +738,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })])).switchMap(([args, id]) => _client.callRemoteMethod(id, "splitRevision", "observable", args)).concatMap(value => {
@@ -746,7 +772,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })]).then(([args, id]) => _client.callRemoteMethod(id, "revert", "promise", args)).then(value => {
@@ -781,7 +807,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })])).switchMap(([args, id]) => _client.callRemoteMethod(id, "checkout", "observable", args)).concatMap(value => {
@@ -803,7 +829,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })])).switchMap(([args, id]) => _client.callRemoteMethod(id, "show", "observable", args)).concatMap(value => {
@@ -814,13 +840,42 @@ module.exports = _client => {
       }).publish();
     }
 
+    diff(arg0, arg1) {
+      return Observable.fromPromise(Promise.all([_client.marshalArguments(Array.from(arguments), [{
+        name: "revision",
+        type: {
+          kind: "string"
+        }
+      }, {
+        name: "unified",
+        type: {
+          kind: "nullable",
+          type: {
+            kind: "number"
+          }
+        }
+      }]), _client.marshal(this, {
+        kind: "named",
+        location: {
+          type: "source",
+          fileName: "HgService.js",
+          line: 308
+        },
+        name: "HgService"
+      })])).switchMap(([args, id]) => _client.callRemoteMethod(id, "diff", "observable", args)).concatMap(value => {
+        return _client.unmarshal(value, {
+          kind: "string"
+        });
+      }).publish();
+    }
+
     purge() {
       return Promise.all([_client.marshalArguments(Array.from(arguments), []), _client.marshal(this, {
         kind: "named",
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })]).then(([args, id]) => _client.callRemoteMethod(id, "purge", "promise", args)).then(value => {
@@ -836,7 +891,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })]).then(([args, id]) => _client.callRemoteMethod(id, "uncommit", "promise", args)).then(value => {
@@ -857,7 +912,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })]).then(([args, id]) => _client.callRemoteMethod(id, "strip", "promise", args)).then(value => {
@@ -873,7 +928,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })]).then(([args, id]) => _client.callRemoteMethod(id, "checkoutForkBase", "promise", args)).then(value => {
@@ -912,7 +967,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })]).then(([args, id]) => _client.callRemoteMethod(id, "rename", "promise", args)).then(value => {
@@ -945,7 +1000,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })]).then(([args, id]) => _client.callRemoteMethod(id, "remove", "promise", args)).then(value => {
@@ -970,7 +1025,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })]).then(([args, id]) => _client.callRemoteMethod(id, "forget", "promise", args)).then(value => {
@@ -995,7 +1050,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })]).then(([args, id]) => _client.callRemoteMethod(id, "add", "promise", args)).then(value => {
@@ -1011,7 +1066,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })]).then(([args, id]) => _client.callRemoteMethod(id, "getTemplateCommitMessage", "promise", args)).then(value => {
@@ -1030,7 +1085,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })]).then(([args, id]) => _client.callRemoteMethod(id, "getHeadCommitMessage", "promise", args)).then(value => {
@@ -1066,7 +1121,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })]).then(([args, id]) => _client.callRemoteMethod(id, "log", "promise", args)).then(value => {
@@ -1083,7 +1138,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })])).switchMap(([args, id]) => _client.callRemoteMethod(id, "fetchMergeConflicts", "observable", args)).concatMap(value => {
@@ -1114,7 +1169,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })])).switchMap(([args, id]) => _client.callRemoteMethod(id, "markConflictedFile", "observable", args)).concatMap(value => {
@@ -1127,16 +1182,19 @@ module.exports = _client => {
 
     continueOperation(arg0) {
       return Observable.fromPromise(Promise.all([_client.marshalArguments(Array.from(arguments), [{
-        name: "command",
+        name: "commandWithOptions",
         type: {
-          kind: "string"
+          kind: "array",
+          type: {
+            kind: "string"
+          }
         }
       }]), _client.marshal(this, {
         kind: "named",
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })])).switchMap(([args, id]) => _client.callRemoteMethod(id, "continueOperation", "observable", args)).concatMap(value => {
@@ -1149,16 +1207,19 @@ module.exports = _client => {
 
     abortOperation(arg0) {
       return Observable.fromPromise(Promise.all([_client.marshalArguments(Array.from(arguments), [{
-        name: "command",
+        name: "commandWithOptions",
         type: {
-          kind: "string"
+          kind: "array",
+          type: {
+            kind: "string"
+          }
         }
       }]), _client.marshal(this, {
         kind: "named",
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })])).switchMap(([args, id]) => _client.callRemoteMethod(id, "abortOperation", "observable", args)).concatMap(value => {
@@ -1174,7 +1235,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })])).switchMap(([args, id]) => _client.callRemoteMethod(id, "resolveAllFiles", "observable", args)).concatMap(value => {
@@ -1204,7 +1265,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })])).switchMap(([args, id]) => _client.callRemoteMethod(id, "rebase", "observable", args)).concatMap(value => {
@@ -1229,7 +1290,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })])).switchMap(([args, id]) => _client.callRemoteMethod(id, "pull", "observable", args)).concatMap(value => {
@@ -1269,7 +1330,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })]).then(([args, id]) => _client.callRemoteMethod(id, "copy", "promise", args)).then(value => {
@@ -1285,7 +1346,7 @@ module.exports = _client => {
         location: {
           type: "source",
           fileName: "HgService.js",
-          line: 283
+          line: 308
         },
         name: "HgService"
       })])).switchMap(([args, id]) => _client.callRemoteMethod(id, "getHeadId", "observable", args)).concatMap(value => {
@@ -1371,7 +1432,7 @@ Object.defineProperty(module.exports, "defs", {
       location: {
         type: "source",
         fileName: "HgService.js",
-        line: 90
+        line: 94
       },
       name: "StatusCodeIdValue",
       definition: {
@@ -1408,7 +1469,7 @@ Object.defineProperty(module.exports, "defs", {
       location: {
         type: "source",
         fileName: "HgService.js",
-        line: 92
+        line: 96
       },
       name: "MergeConflictStatusValue",
       definition: {
@@ -1433,7 +1494,7 @@ Object.defineProperty(module.exports, "defs", {
       location: {
         type: "source",
         fileName: "HgService.js",
-        line: 98
+        line: 102
       },
       name: "MergeConflictStatusCodeId",
       definition: {
@@ -1452,7 +1513,7 @@ Object.defineProperty(module.exports, "defs", {
       location: {
         type: "source",
         fileName: "HgService.js",
-        line: 108
+        line: 112
       },
       name: "StatusCodeNumberValue",
       definition: {
@@ -1489,7 +1550,7 @@ Object.defineProperty(module.exports, "defs", {
       location: {
         type: "source",
         fileName: "HgService.js",
-        line: 110
+        line: 114
       },
       name: "LineDiff",
       definition: {
@@ -1526,7 +1587,7 @@ Object.defineProperty(module.exports, "defs", {
       location: {
         type: "source",
         fileName: "HgService.js",
-        line: 117
+        line: 121
       },
       name: "BookmarkInfo",
       definition: {
@@ -1563,7 +1624,7 @@ Object.defineProperty(module.exports, "defs", {
       location: {
         type: "source",
         fileName: "HgService.js",
-        line: 124
+        line: 128
       },
       name: "DiffInfo",
       definition: {
@@ -1598,7 +1659,7 @@ Object.defineProperty(module.exports, "defs", {
       location: {
         type: "source",
         fileName: "HgService.js",
-        line: 130
+        line: 134
       },
       name: "CommitPhaseType",
       definition: {
@@ -1620,7 +1681,7 @@ Object.defineProperty(module.exports, "defs", {
       location: {
         type: "source",
         fileName: "HgService.js",
-        line: 132
+        line: 136
       },
       name: "SuccessorTypeValue",
       definition: {
@@ -1651,7 +1712,7 @@ Object.defineProperty(module.exports, "defs", {
       location: {
         type: "source",
         fileName: "HgService.js",
-        line: 140
+        line: 144
       },
       name: "RevisionSuccessorInfo",
       definition: {
@@ -1677,7 +1738,7 @@ Object.defineProperty(module.exports, "defs", {
       location: {
         type: "source",
         fileName: "HgService.js",
-        line: 145
+        line: 149
       },
       name: "RevisionInfo",
       definition: {
@@ -1784,6 +1845,16 @@ Object.defineProperty(module.exports, "defs", {
             kind: "string"
           },
           optional: false
+        }, {
+          name: "files",
+          type: {
+            kind: "array",
+            type: {
+              kind: "named",
+              name: "NuclideUri"
+            }
+          },
+          optional: false
         }]
       }
     },
@@ -1792,7 +1863,7 @@ Object.defineProperty(module.exports, "defs", {
       location: {
         type: "source",
         fileName: "HgService.js",
-        line: 162
+        line: 167
       },
       name: "RevisionShowInfo",
       definition: {
@@ -1811,7 +1882,7 @@ Object.defineProperty(module.exports, "defs", {
       location: {
         type: "source",
         fileName: "HgService.js",
-        line: 166
+        line: 171
       },
       name: "AsyncExecuteRet",
       definition: {
@@ -1854,7 +1925,7 @@ Object.defineProperty(module.exports, "defs", {
       location: {
         type: "source",
         fileName: "HgService.js",
-        line: 174
+        line: 179
       },
       name: "RevisionFileCopy",
       definition: {
@@ -1881,7 +1952,7 @@ Object.defineProperty(module.exports, "defs", {
       location: {
         type: "source",
         fileName: "HgService.js",
-        line: 179
+        line: 184
       },
       name: "RevisionFileChanges",
       definition: {
@@ -1944,7 +2015,7 @@ Object.defineProperty(module.exports, "defs", {
       location: {
         type: "source",
         fileName: "HgService.js",
-        line: 187
+        line: 192
       },
       name: "VcsLogEntry",
       definition: {
@@ -1986,7 +2057,7 @@ Object.defineProperty(module.exports, "defs", {
       location: {
         type: "source",
         fileName: "HgService.js",
-        line: 194
+        line: 199
       },
       name: "VcsLogResponse",
       definition: {
@@ -2009,7 +2080,7 @@ Object.defineProperty(module.exports, "defs", {
       location: {
         type: "source",
         fileName: "HgService.js",
-        line: 199
+        line: 204
       },
       name: "MergeConflictSideFileData",
       definition: {
@@ -2055,7 +2126,7 @@ Object.defineProperty(module.exports, "defs", {
       location: {
         type: "source",
         fileName: "HgService.js",
-        line: 207
+        line: 212
       },
       name: "MergeConflictOutputFileData",
       definition: {
@@ -2125,7 +2196,7 @@ Object.defineProperty(module.exports, "defs", {
       location: {
         type: "source",
         fileName: "HgService.js",
-        line: 211
+        line: 216
       },
       name: "MergeConflictFileData",
       definition: {
@@ -2179,7 +2250,7 @@ Object.defineProperty(module.exports, "defs", {
       location: {
         type: "source",
         fileName: "HgService.js",
-        line: 220
+        line: 225
       },
       name: "MergeConflicts",
       definition: {
@@ -2200,6 +2271,31 @@ Object.defineProperty(module.exports, "defs", {
             kind: "string"
           },
           optional: false
+        }, {
+          name: "command_details",
+          type: {
+            kind: "object",
+            fields: [{
+              name: "cmd",
+              type: {
+                kind: "string"
+              },
+              optional: false
+            }, {
+              name: "to_abort",
+              type: {
+                kind: "string"
+              },
+              optional: false
+            }, {
+              name: "to_continue",
+              type: {
+                kind: "string"
+              },
+              optional: false
+            }]
+          },
+          optional: false
         }]
       }
     },
@@ -2208,7 +2304,7 @@ Object.defineProperty(module.exports, "defs", {
       location: {
         type: "source",
         fileName: "HgService.js",
-        line: 225
+        line: 235
       },
       name: "CheckoutSideName",
       definition: {
@@ -2227,7 +2323,7 @@ Object.defineProperty(module.exports, "defs", {
       location: {
         type: "source",
         fileName: "HgService.js",
-        line: 227
+        line: 237
       },
       name: "AmendModeValue",
       definition: {
@@ -2249,7 +2345,7 @@ Object.defineProperty(module.exports, "defs", {
       location: {
         type: "source",
         fileName: "HgService.js",
-        line: 229
+        line: 239
       },
       name: "CheckoutOptions",
       definition: {
@@ -2269,15 +2365,42 @@ Object.defineProperty(module.exports, "defs", {
       location: {
         type: "source",
         fileName: "HgService.js",
-        line: 233
+        line: 243
       },
       name: "OperationProgressState",
       definition: {
         kind: "object",
         fields: [{
-          name: "topic",
+          name: "active",
           type: {
-            kind: "string"
+            kind: "boolean"
+          },
+          optional: false
+        }, {
+          name: "estimate_sec",
+          type: {
+            kind: "nullable",
+            type: {
+              kind: "number"
+            }
+          },
+          optional: false
+        }, {
+          name: "estimate_str",
+          type: {
+            kind: "nullable",
+            type: {
+              kind: "string"
+            }
+          },
+          optional: false
+        }, {
+          name: "item",
+          type: {
+            kind: "nullable",
+            type: {
+              kind: "string"
+            }
           },
           optional: false
         }, {
@@ -2287,35 +2410,47 @@ Object.defineProperty(module.exports, "defs", {
           },
           optional: false
         }, {
+          name: "speed_str",
+          type: {
+            kind: "nullable",
+            type: {
+              kind: "string"
+            }
+          },
+          optional: false
+        }, {
+          name: "topic",
+          type: {
+            kind: "string"
+          },
+          optional: false
+        }, {
           name: "total",
           type: {
-            kind: "number"
+            kind: "nullable",
+            type: {
+              kind: "number"
+            }
           },
           optional: false
         }, {
           name: "unit",
           type: {
-            kind: "string"
+            kind: "nullable",
+            type: {
+              kind: "string"
+            }
           },
           optional: false
         }, {
-          name: "active",
+          name: "units_per_sec",
           type: {
-            kind: "boolean"
+            kind: "nullable",
+            type: {
+              kind: "number"
+            }
           },
           optional: false
-        }, {
-          name: "speed",
-          type: {
-            kind: "string"
-          },
-          optional: true
-        }, {
-          name: "estimate",
-          type: {
-            kind: "string"
-          },
-          optional: true
         }]
       }
     },
@@ -2324,7 +2459,7 @@ Object.defineProperty(module.exports, "defs", {
       location: {
         type: "source",
         fileName: "HgService.js",
-        line: 243
+        line: 255
       },
       name: "OperationProgress",
       definition: {
@@ -2348,12 +2483,49 @@ Object.defineProperty(module.exports, "defs", {
         }]
       }
     },
+    AdditionalLogFile: {
+      kind: "alias",
+      location: {
+        type: "source",
+        fileName: "rpc-types.js",
+        line: 31
+      },
+      name: "AdditionalLogFile",
+      definition: {
+        kind: "object",
+        fields: [{
+          name: "title",
+          type: {
+            kind: "string"
+          },
+          optional: false
+        }, {
+          name: "data",
+          type: {
+            kind: "string"
+          },
+          optional: false
+        }]
+      }
+    },
+    DeadlineRequest: {
+      kind: "alias",
+      location: {
+        type: "source",
+        fileName: "promise.js",
+        line: 210
+      },
+      name: "DeadlineRequest",
+      definition: {
+        kind: "number"
+      }
+    },
     ProcessExitMessage: {
       kind: "alias",
       location: {
         type: "source",
         fileName: "process.js",
-        line: 586
+        line: 598
       },
       name: "ProcessExitMessage",
       definition: {
@@ -2391,7 +2563,7 @@ Object.defineProperty(module.exports, "defs", {
       location: {
         type: "source",
         fileName: "process.js",
-        line: 592
+        line: 604
       },
       name: "ProcessMessage",
       definition: {
@@ -2465,7 +2637,7 @@ Object.defineProperty(module.exports, "defs", {
       location: {
         type: "source",
         fileName: "process.js",
-        line: 605
+        line: 617
       },
       name: "LegacyProcessMessage",
       definition: {
@@ -2557,7 +2729,7 @@ Object.defineProperty(module.exports, "defs", {
       location: {
         type: "source",
         fileName: "HgService.js",
-        line: 283
+        line: 308
       },
       constructorArgs: [{
         name: "workingDirectory",
@@ -2571,7 +2743,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 316
+            line: 341
           },
           kind: "function",
           argumentTypes: [],
@@ -2586,7 +2758,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 320
+            line: 345
           },
           kind: "function",
           argumentTypes: [],
@@ -2601,7 +2773,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 360
+            line: 385
           },
           kind: "function",
           argumentTypes: [{
@@ -2632,7 +2804,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 390
+            line: 415
           },
           kind: "function",
           argumentTypes: [],
@@ -2655,7 +2827,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 409
+            line: 434
           },
           kind: "function",
           argumentTypes: [],
@@ -2674,11 +2846,36 @@ Object.defineProperty(module.exports, "defs", {
             }
           }
         },
+        getAdditionalLogFiles: {
+          location: {
+            type: "source",
+            fileName: "HgService.js",
+            line: 440
+          },
+          kind: "function",
+          argumentTypes: [{
+            name: "deadline",
+            type: {
+              kind: "named",
+              name: "DeadlineRequest"
+            }
+          }],
+          returnType: {
+            kind: "promise",
+            type: {
+              kind: "array",
+              type: {
+                kind: "named",
+                name: "AdditionalLogFile"
+              }
+            }
+          }
+        },
         observeFilesDidChange: {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 661
+            line: 764
           },
           kind: "function",
           argumentTypes: [],
@@ -2697,7 +2894,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 669
+            line: 772
           },
           kind: "function",
           argumentTypes: [],
@@ -2712,7 +2909,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 683
+            line: 786
           },
           kind: "function",
           argumentTypes: [],
@@ -2727,7 +2924,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 690
+            line: 793
           },
           kind: "function",
           argumentTypes: [],
@@ -2742,7 +2939,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 698
+            line: 801
           },
           kind: "function",
           argumentTypes: [],
@@ -2758,7 +2955,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 734
+            line: 838
           },
           kind: "function",
           argumentTypes: [{
@@ -2793,7 +2990,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 771
+            line: 875
           },
           kind: "function",
           argumentTypes: [{
@@ -2821,7 +3018,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 782
+            line: 886
           },
           kind: "function",
           argumentTypes: [{
@@ -2841,7 +3038,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 786
+            line: 890
           },
           kind: "function",
           argumentTypes: [{
@@ -2866,7 +3063,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 797
+            line: 901
           },
           kind: "function",
           argumentTypes: [],
@@ -2881,7 +3078,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 804
+            line: 908
           },
           kind: "function",
           argumentTypes: [],
@@ -2900,7 +3097,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 818
+            line: 922
           },
           kind: "function",
           argumentTypes: [],
@@ -2915,7 +3112,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 825
+            line: 929
           },
           kind: "function",
           argumentTypes: [],
@@ -2930,7 +3127,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 838
+            line: 942
           },
           kind: "function",
           argumentTypes: [{
@@ -2956,7 +3153,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 849
+            line: 953
           },
           kind: "function",
           argumentTypes: [{
@@ -2977,7 +3174,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 861
+            line: 965
           },
           kind: "function",
           argumentTypes: [],
@@ -2996,7 +3193,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 871
+            line: 975
           },
           kind: "function",
           argumentTypes: [],
@@ -3015,7 +3212,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 878
+            line: 982
           },
           kind: "function",
           argumentTypes: [],
@@ -3031,7 +3228,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 892
+            line: 996
           },
           kind: "function",
           argumentTypes: [{
@@ -3059,7 +3256,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 942
+            line: 1046
           },
           kind: "function",
           argumentTypes: [{
@@ -3082,7 +3279,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 963
+            line: 1067
           },
           kind: "function",
           argumentTypes: [{
@@ -3105,7 +3302,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 998
+            line: 1102
           },
           kind: "function",
           argumentTypes: [{
@@ -3131,7 +3328,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 1052
+            line: 1156
           },
           kind: "function",
           argumentTypes: [{
@@ -3164,7 +3361,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 1066
+            line: 1170
           },
           kind: "function",
           argumentTypes: [{
@@ -3190,7 +3387,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 1086
+            line: 1190
           },
           kind: "function",
           argumentTypes: [{
@@ -3232,7 +3429,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 1108
+            line: 1213
           },
           kind: "function",
           argumentTypes: [],
@@ -3248,7 +3445,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 1116
+            line: 1221
           },
           kind: "function",
           argumentTypes: [],
@@ -3264,7 +3461,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 1138
+            line: 1243
           },
           kind: "function",
           argumentTypes: [{
@@ -3296,7 +3493,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 1173
+            line: 1278
           },
           kind: "function",
           argumentTypes: [{
@@ -3331,7 +3528,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 1191
+            line: 1296
           },
           kind: "function",
           argumentTypes: [{
@@ -3348,11 +3545,39 @@ Object.defineProperty(module.exports, "defs", {
             }
           }
         },
+        diff: {
+          location: {
+            type: "source",
+            fileName: "HgService.js",
+            line: 1308
+          },
+          kind: "function",
+          argumentTypes: [{
+            name: "revision",
+            type: {
+              kind: "string"
+            }
+          }, {
+            name: "unified",
+            type: {
+              kind: "nullable",
+              type: {
+                kind: "number"
+              }
+            }
+          }],
+          returnType: {
+            kind: "observable",
+            type: {
+              kind: "string"
+            }
+          }
+        },
         purge: {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 1206
+            line: 1322
           },
           kind: "function",
           argumentTypes: [],
@@ -3367,7 +3592,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 1213
+            line: 1329
           },
           kind: "function",
           argumentTypes: [],
@@ -3382,7 +3607,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 1220
+            line: 1336
           },
           kind: "function",
           argumentTypes: [{
@@ -3402,7 +3627,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 1228
+            line: 1344
           },
           kind: "function",
           argumentTypes: [],
@@ -3417,7 +3642,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 1249
+            line: 1365
           },
           kind: "function",
           argumentTypes: [{
@@ -3455,7 +3680,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 1276
+            line: 1392
           },
           kind: "function",
           argumentTypes: [{
@@ -3487,7 +3712,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 1298
+            line: 1414
           },
           kind: "function",
           argumentTypes: [{
@@ -3511,7 +3736,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 1311
+            line: 1427
           },
           kind: "function",
           argumentTypes: [{
@@ -3535,7 +3760,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 1315
+            line: 1431
           },
           kind: "function",
           argumentTypes: [],
@@ -3553,7 +3778,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 1332
+            line: 1448
           },
           kind: "function",
           argumentTypes: [],
@@ -3571,7 +3796,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 1358
+            line: 1474
           },
           kind: "function",
           argumentTypes: [{
@@ -3604,7 +3829,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 1378
+            line: 1494
           },
           kind: "function",
           argumentTypes: [],
@@ -3623,7 +3848,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 1417
+            line: 1534
           },
           kind: "function",
           argumentTypes: [{
@@ -3650,13 +3875,16 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 1433
+            line: 1550
           },
           kind: "function",
           argumentTypes: [{
-            name: "command",
+            name: "commandWithOptions",
             type: {
-              kind: "string"
+              kind: "array",
+              type: {
+                kind: "string"
+              }
             }
           }],
           returnType: {
@@ -3671,13 +3899,16 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 1449
+            line: 1566
           },
           kind: "function",
           argumentTypes: [{
-            name: "command",
+            name: "commandWithOptions",
             type: {
-              kind: "string"
+              kind: "array",
+              type: {
+                kind: "string"
+              }
             }
           }],
           returnType: {
@@ -3691,7 +3922,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 1457
+            line: 1575
           },
           kind: "function",
           argumentTypes: [],
@@ -3707,7 +3938,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 1467
+            line: 1585
           },
           kind: "function",
           argumentTypes: [{
@@ -3736,7 +3967,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 1487
+            line: 1605
           },
           kind: "function",
           argumentTypes: [{
@@ -3760,7 +3991,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 1502
+            line: 1620
           },
           kind: "function",
           argumentTypes: [{
@@ -3798,7 +4029,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "HgService.js",
-            line: 1528
+            line: 1646
           },
           kind: "function",
           argumentTypes: [],

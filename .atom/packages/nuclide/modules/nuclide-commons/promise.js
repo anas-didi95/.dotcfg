@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.PromiseWithState = exports.asyncSome = exports.asyncObjFilter = exports.asyncFilter = exports.Deferred = exports.retryLimit = exports.triggerAfterWait = exports.RequestSerializer = undefined;
+exports.PromiseWithState = exports.asyncSome = exports.asyncObjFilter = exports.asyncFilter = exports.Deferred = exports.retryLimit = exports.TimedOutError = exports.triggerAfterWait = exports.RequestSerializer = undefined;
 
 var _asyncToGenerator = _interopRequireDefault(require('async-to-generator'));
 
@@ -37,8 +37,7 @@ let triggerAfterWait = exports.triggerAfterWait = (() => {
 })();
 
 /**
- * Returns a Promise that resolves to the same value as the given promise, or rejects if it takes
- * longer than `milliseconds` milliseconds
+ * Thrown by `timeoutPromise` if the timer fires before the promise resolves/rejects.
  */
 
 
@@ -242,6 +241,8 @@ let asyncSome = exports.asyncSome = (() => {
 exports.sleep = sleep;
 exports.nextTick = nextTick;
 exports.timeoutPromise = timeoutPromise;
+exports.createDeadline = createDeadline;
+exports.timeoutAfterDeadline = timeoutAfterDeadline;
 exports.serializeAsyncCall = serializeAsyncCall;
 exports.asyncFind = asyncFind;
 exports.denodeify = denodeify;
@@ -365,11 +366,26 @@ function nextTick() {
   return new Promise(resolve => {
     process.nextTick(resolve);
   });
-}function timeoutPromise(promise, milliseconds) {
+}class TimedOutError extends Error {
+  constructor(milliseconds) {
+    super(`Timed out after ${String(milliseconds)} ms`);
+    this.timeout = milliseconds;
+  }
+}
+
+exports.TimedOutError = TimedOutError; /**
+                                        * Returns a Promise that resolves to the same value as the given promise, or rejects with
+                                        * `TimedOutError` if it takes longer than `milliseconds` milliseconds.
+                                        */
+
+function timeoutPromise(promise, milliseconds) {
   return new Promise((resolve, reject) => {
     let timeout = setTimeout(() => {
       timeout = null;
-      reject(new Error(`Promise timed out after ${String(milliseconds)} ms`));
+      reject(new TimedOutError(milliseconds));
+      // This gives useless error.stack results.
+      // We could capture the stack pre-emptively at the start
+      // of this method if we wanted useful ones.
     }, milliseconds);
     promise.then(value => {
       if (timeout != null) {
@@ -383,6 +399,31 @@ function nextTick() {
       reject(value);
     });
   });
+}
+
+// An DeadlineRequest parameter to an async method is a way of *requesting* that
+// method to throw a TimedOutError if it doesn't complete in a certain time.
+// It's just a request -- the async method will typically honor the request
+// by passing the parameter on to ALL subsidiary async methods that it awaits,
+// or by calling expirePromise to enforce a timeout, or similar.
+//
+// In cases where a method supports DeadlineRequest but you don't trust it, do
+// `await timeoutAfterDeadline(deadline, untrusted.foo(deadline-1000))` so you
+// ask it nicely but if it doesn't give its own more-specific deadline message
+// within a 1000ms grace period then you force matters.
+//
+// Under the hood an DeadlineRequest is just a timestamp of the time by which
+// the operation should complete. This makes it compositional (better than
+// "delay" parameters) and safely remotable (better than "CancellationToken"
+// parameters) so long as clocks are in sync. In all other respects it's less
+// versatile than CancellationTokens.
+function createDeadline(delay) {
+  return Date.now() + delay;
+}
+
+function timeoutAfterDeadline(deadline, promise) {
+  const delay = deadline - Date.now();
+  return timeoutPromise(promise, delay < 0 ? 0 : delay);
 }function serializeAsyncCall(asyncFun) {
   let scheduledCall = null;
   let pendingCall = null;

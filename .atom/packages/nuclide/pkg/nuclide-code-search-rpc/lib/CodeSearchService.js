@@ -13,8 +13,8 @@ let resolveTool = (() => {
       return tool;
     }
     return (0, (_promise || _load_promise()).asyncFind)(_os.default.platform() === 'win32' ? WINDOWS_TOOLS : POSIX_TOOLS, function (t) {
-      return (0, (_hasCommand || _load_hasCommand()).hasCommand)(t).then(function (has) {
-        return has ? t : null;
+      return (0, (_which || _load_which()).default)(t).then(function (cmd) {
+        return cmd != null ? t : null;
       });
     });
   });
@@ -24,40 +24,50 @@ let resolveTool = (() => {
   };
 })();
 
-let isEligibleForDirectory = exports.isEligibleForDirectory = (() => {
+let isFbManaged = (() => {
   var _ref2 = (0, _asyncToGenerator.default)(function* (rootDirectory) {
-    if ((yield resolveTool(null)) == null) {
-      return false;
-    }
-
-    const projectId = yield (0, (_nuclideArcanistRpc || _load_nuclideArcanistRpc()).findArcProjectIdOfPath)(rootDirectory);
-    if (projectId == null) {
-      return true;
-    }
-
     try {
+      // $FlowFB
+      const { findArcProjectIdOfPath } = require('../../fb-arcanist-rpc');
+      const projectId = yield findArcProjectIdOfPath(rootDirectory);
+      if (projectId == null) {
+        return false;
+      }
       // $FlowFB
       const bigGrep = require('../../commons-atom/fb-biggrep-query'); // eslint-disable-line rulesdir/no-cross-atom-imports
       const corpus = bigGrep.ARC_PROJECT_CORPUS[projectId];
       if (corpus != null) {
-        return false;
+        return true;
       }
     } catch (err) {}
-    return true;
+    return false;
   });
 
-  return function isEligibleForDirectory(_x2) {
+  return function isFbManaged(_x2) {
     return _ref2.apply(this, arguments);
   };
 })();
 
+let isEligibleForDirectory = exports.isEligibleForDirectory = (() => {
+  var _ref3 = (0, _asyncToGenerator.default)(function* (rootDirectory) {
+    const checks = yield Promise.all([resolveTool(null).then(function (tool) {
+      return tool == null;
+    }), isFbManaged(rootDirectory), (0, (_FileSystemService || _load_FileSystemService()).isNfs)(rootDirectory), (0, (_FileSystemService || _load_FileSystemService()).isFuse)(rootDirectory)]);
+    if (checks.some(function (x) {
+      return x;
+    })) {
+      return false;
+    }
+
+    return true;
+  });
+
+  return function isEligibleForDirectory(_x3) {
+    return _ref3.apply(this, arguments);
+  };
+})();
+
 exports.searchWithTool = searchWithTool;
-
-var _nuclideArcanistRpc;
-
-function _load_nuclideArcanistRpc() {
-  return _nuclideArcanistRpc = require('../../nuclide-arcanist-rpc');
-}
 
 var _AgAckService;
 
@@ -73,16 +83,22 @@ function _load_RgService() {
 
 var _rxjsBundlesRxMinJs = require('rxjs/bundles/Rx.min.js');
 
-var _hasCommand;
-
-function _load_hasCommand() {
-  return _hasCommand = require('nuclide-commons/hasCommand');
-}
-
 var _promise;
 
 function _load_promise() {
   return _promise = require('nuclide-commons/promise');
+}
+
+var _which;
+
+function _load_which() {
+  return _which = _interopRequireDefault(require('nuclide-commons/which'));
+}
+
+var _FileSystemService;
+
+function _load_FileSystemService() {
+  return _FileSystemService = require('../../nuclide-server/lib/services/FileSystemService');
 }
 
 var _os = _interopRequireDefault(require('os'));

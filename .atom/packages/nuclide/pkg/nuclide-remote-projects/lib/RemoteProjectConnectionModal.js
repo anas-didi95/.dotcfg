@@ -97,6 +97,7 @@ class RemoteProjectConnectionModal extends _react.Component {
           profileHosts: (0, (_connectionProfileUtils || _load_connectionProfileUtils()).getUniqueHostsForProfiles)(this.props.connectionProfiles)
         });
       default:
+        this.props.screen;
         throw new Error(`Invalid screen: ${this.props.screen}`);
     }
   }

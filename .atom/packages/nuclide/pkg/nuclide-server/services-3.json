@@ -4,10 +4,6 @@
     "name": "AdbService"
   },
   {
-    "implementation": "../nuclide-arcanist-rpc/lib/ArcanistService.js",
-    "name": "ArcanistService"
-  },
-  {
     "implementation": "../nuclide-buck-rpc/lib/BuckService.js",
     "name": "BuckService"
   },
@@ -89,6 +85,10 @@
     "name": "PhpDebuggerService"
   },
   {
+    "implementation": "../nuclide-pty-rpc/lib/PtyService.js",
+    "name": "PtyService"
+  },
+  {
     "implementation": "../nuclide-python-rpc/lib/PythonService.js",
     "name": "PythonService"
   },
@@ -115,5 +115,9 @@
   {
     "implementation": "../nuclide-vscode-language-service-rpc/lib/main.js",
     "name": "VSCodeLanguageService"
+  },
+  {
+    "implementation": "../nuclide-clangd-lsp-rpc/lib/main.js",
+    "name": "ClangdLSPService"
   }
 ]

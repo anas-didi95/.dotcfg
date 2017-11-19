@@ -1,26 +1,15 @@
 const {Disposable, Emitter, CompositeDisposable} = require("atom")
 
 const Base = require("./base")
-const globalState = require("./global-state")
 const settings = require("./settings")
 const VimState = require("./vim-state")
 
 module.exports = {
   config: settings.config,
 
-  getStatusBarManager() {
-    if (!this.statusBarManager) this.statusBarManager = new (require("./status-bar-manager"))()
-    return this.statusBarManager
-  },
-
-  getPaneUtils() {
-    if (!this.paneUtils) this.paneUtils = new (require("./pane-utils"))()
-    return this.paneUtils
-  },
-
   activate() {
     this.emitter = new Emitter()
-    settings.notifyDeprecatedParams()
+    settings.silentlyRemoveUnusedParams()
     settings.migrateRenamedParams()
 
     if (atom.inSpecMode()) settings.set("strictAssertion", true)
@@ -33,60 +22,50 @@ module.exports = {
       atom.workspace.onDidChangeActivePane(() => this.demaximizePane()),
       atom.workspace.observeTextEditors(editor => {
         if (!editor.isMini()) {
-          this.emitter.emit("did-add-vim-state", new VimState(editor, this.getStatusBarManager(), globalState))
+          this.emitter.emit("did-add-vim-state", new VimState(editor, this.statusBarManager))
         }
       }),
       atom.workspace.onDidStopChangingActivePaneItem(item => {
-        if (settings.get("automaticallyEscapeInsertModeOnActivePaneItemChange")) {
-          VimState.forEach(vimState => {
-            if (vimState.mode === "insert" && vimState.editor !== item) vimState.activate("normal")
-          })
-        }
+        if (atom.workspace.isTextEditor(item) && item.isMini()) return
+
+        const autoEscapeInsertMode = settings.get("automaticallyEscapeInsertModeOnActivePaneItemChange")
+
+        VimState.forEach(vimState => {
+          if (vimState.editor === item) {
+            vimState.updateStatusBar()
+          } else if (autoEscapeInsertMode && vimState.mode === "insert") {
+            vimState.activate("normal")
+          }
+
+          // [FIXME] Clear existing flash markers for all vimState to avoid hide/show editor re-start flash animation.
+          // This is workaround for "the keyframe animation being restarted on re-activating editor"-issue.
+          // Ideally I want to remove this and keyframe animation state is mainained across hide/show editor item.
+          vimState.clearFlash()
+
+          if (vimState.__highlightSearch || this.globalState.get("highlightSearchPattern")) {
+            vimState.highlightSearch.refresh()
+          }
+        })
+
         if (!atom.workspace.isTextEditor(item)) {
-          if (this.statusBarManager) this.statusBarManager.clear()
-          return
-        }
-        if (item.isMini()) return
-
-        // [FIXME] Clear existing flash markers for all vimState to avoid hide/show editor re-start flash animation.
-        // This is workaround for "the keyframe animation being restarted on re-activating editor"-issue.
-        // Ideally I want to remove this and keyframe animation state is mainained across hide/show editor item.
-        VimState.forEach(vimState => vimState.clearFlash())
-
-        // Still there is possibility editor is destroyed and don't have corresponding
-        // vimState #196.
-        const vimState = this.getEditorState(item)
-        if (!vimState) return
-
-        vimState.updateStatusBar()
-        if (globalState.get("highlightSearchPattern") || vimState.__highlightSearch) {
-          vimState.highlightSearch.refresh()
+          this.statusBarManager.clear()
         }
       }),
-      // Refresh highlight based on globalState.highlightSearchPattern changes.
-      // -------------------------
-      globalState.onDidChange(({name, newValue}) => {
-        if (name !== "highlightSearchPattern") return
+      settings.onDidChange("highlightSearch", ({newValue}) => {
         if (newValue) {
-          VimState.forEach(vimState => vimState.highlightSearch.refresh())
+          this.globalState.set("highlightSearchPattern", this.globalState.get("lastSearchPattern"))
         } else {
-          VimState.forEach(vimState => {
-            // avoid populate prop unnecessarily on vimState.reset on startup
-            if (vimState.__highlightSearch) vimState.highlightSearch.clearMarkers()
-          })
+          this.clearHighlightSearch()
         }
-      }),
-      settings.observe("highlightSearch", enabled => {
-        globalState.set("highlightSearchPattern", enabled ? globalState.get("lastSearchPattern") : null)
       }),
       ...settings.observeConditionalKeymaps()
     )
 
     if (atom.inDevMode()) {
-      this.developer = new (require("./developer"))()
-      this.subscriptions.add(this.developer.init(this.getEditorState))
+      const developer = require("./developer")
+      this.subscriptions.add(developer.init())
       if (settings.get("debug")) {
-        this.developer.reportRequireCache({excludeNodModules: false})
+        developer.reportRequireCache({excludeNodModules: false})
       }
     }
   },
@@ -126,8 +105,6 @@ module.exports = {
 
   deactivate() {
     this.demaximizePane()
-    if (this.demoModeSupport) this.demoModeSupport.destroy()
-
     this.subscriptions.dispose()
     VimState.forEach(vimState => vimState.destroy())
     VimState.clear()
@@ -140,21 +117,21 @@ module.exports = {
         "vim-mode-plus:toggle-highlight-search": () => this.toggleHighlightSearch(),
       }),
       atom.commands.add("atom-workspace", {
-        "vim-mode-plus:maximize-pane": () => this.getPaneUtils().maximizePane(),
-        "vim-mode-plus:maximize-pane-without-center": () => this.getPaneUtils().maximizePane(false),
-        "vim-mode-plus:equalize-panes": () => this.getPaneUtils().equalizePanes(),
-        "vim-mode-plus:exchange-pane": () => this.getPaneUtils().exchangePane(),
-        "vim-mode-plus:move-pane-to-very-top": () => this.getPaneUtils().movePaneToVery("top"),
-        "vim-mode-plus:move-pane-to-very-bottom": () => this.getPaneUtils().movePaneToVery("bottom"),
-        "vim-mode-plus:move-pane-to-very-left": () => this.getPaneUtils().movePaneToVery("left"),
-        "vim-mode-plus:move-pane-to-very-right": () => this.getPaneUtils().movePaneToVery("right"),
+        "vim-mode-plus:maximize-pane": () => this.paneUtils.maximizePane(),
+        "vim-mode-plus:maximize-pane-without-center": () => this.paneUtils.maximizePane(false),
+        "vim-mode-plus:equalize-panes": () => this.paneUtils.equalizePanes(),
+        "vim-mode-plus:exchange-pane": () => this.paneUtils.exchangePane(),
+        "vim-mode-plus:move-pane-to-very-top": () => this.paneUtils.movePaneToVery("top"),
+        "vim-mode-plus:move-pane-to-very-bottom": () => this.paneUtils.movePaneToVery("bottom"),
+        "vim-mode-plus:move-pane-to-very-left": () => this.paneUtils.movePaneToVery("left"),
+        "vim-mode-plus:move-pane-to-very-right": () => this.paneUtils.movePaneToVery("right"),
       }),
     ]
   },
 
   // atom-text-editor commands
   clearHighlightSearch() {
-    globalState.set("highlightSearchPattern", null)
+    this.globalState.set("highlightSearchPattern", null)
   },
 
   toggleHighlightSearch() {
@@ -162,7 +139,7 @@ module.exports = {
   },
 
   demaximizePane() {
-    if (this.paneUtils) this.paneUtils.demaximizePane()
+    this.__paneUtils && this.paneUtils.demaximizePane()
   },
 
   registerVimStateCommands() {
@@ -178,11 +155,11 @@ module.exports = {
       "set-register-name"() { this.register.setName() },
       "set-register-name-to-_"() { this.register.setName("_") },
       "set-register-name-to-*"() { this.register.setName("*") },
-      "operator-modifier-characterwise"() { this.emitDidSetOperatorModifier({wise: "characterwise"}) },
-      "operator-modifier-linewise"() { this.emitDidSetOperatorModifier({wise: "linewise"}) },
-      "operator-modifier-occurrence"() { this.emitDidSetOperatorModifier({occurrence: true, occurrenceType: "base"}) },
-      "operator-modifier-subword-occurrence"() { this.emitDidSetOperatorModifier({occurrence: true, occurrenceType: "subword"}) },
-      repeat() { this.operationStack.runRecorded() },
+      "operator-modifier-characterwise"() { this.setOperatorModifier({wise: "characterwise"}) },
+      "operator-modifier-linewise"() { this.setOperatorModifier({wise: "linewise"}) },
+      "operator-modifier-occurrence"() { this.setOperatorModifier({occurrence: true, occurrenceType: "base"}) },
+      "operator-modifier-subword-occurrence"() { this.setOperatorModifier({occurrence: true, occurrenceType: "subword"}) },
+      "repeat"() { this.operationStack.runRecorded() },
       "repeat-find"() { this.operationStack.runCurrentFind() },
       "repeat-find-reverse"() { this.operationStack.runCurrentFind({reverse: true}) },
       "repeat-search"() { this.operationStack.runCurrentSearch() },
@@ -213,10 +190,13 @@ module.exports = {
       const boundCommands = {}
       for (const name of Object.keys(commands)) {
         const fn = commands[name]
-        boundCommands[`vim-mode-plus:${name}`] = function(event) {
-          event.stopPropagation()
-          const vimState = getEditorState(this.getModel())
-          if (vimState) fn.call(vimState, event)
+        boundCommands[`vim-mode-plus:${name}`] = {
+          hiddenInCommandPalette: true,
+          didDispatch(event) {
+            event.stopPropagation()
+            const vimState = getEditorState(this.getModel())
+            if (vimState) fn.call(vimState)
+          },
         }
       }
       return boundCommands
@@ -225,33 +205,45 @@ module.exports = {
     return atom.commands.add("atom-text-editor:not([mini])", bindToVimState(commands))
   },
 
-  consumeStatusBar(statusBar) {
-    const statusBarManager = this.getStatusBarManager()
-    statusBarManager.initialize(statusBar)
-    statusBarManager.attach()
-    this.subscriptions.add(new Disposable(() => statusBarManager.detach()))
+  consumeStatusBar(service) {
+    this.subscriptions.add(this.statusBarManager.init(service))
   },
 
-  consumeDemoMode(demoModeService) {
-    this.demoModeSupport = new (require("./demo-mode-support"))(demoModeService)
+  consumeDemoMode(service) {
+    const demoModeSupport = require("./demo-mode-support")
+    this.subscriptions.add(...demoModeSupport.init(service))
+  },
+
+  // Computed props
+  // -------------------------
+  get statusBarManager() {
+    return this.__statusBarManager || (this.__statusBarManager = require("./status-bar-manager"))
+  },
+
+  get paneUtils() {
+    return this.__paneUtils || (this.__paneUtils = require("./pane-utils"))
+  },
+
+  get globalState() {
+    return this.__globalState || (this.__globalState = require("./global-state"))
   },
 
   // Service API
   // -------------------------
   getGlobalState() {
-    return globalState
+    return this.globalState
   },
 
   getEditorState(editor) {
-    return VimState.getByEditor(editor)
+    return VimState.get(editor)
   },
 
   provideVimModePlus() {
     return {
       Base: Base,
-      registerCommandFromSpec: Base.registerCommandFromSpec,
-      getGlobalState: this.getGlobalState,
-      getEditorState: this.getEditorState,
+      registerCommandFromSpec: Base.registerCommandFromSpec.bind(Base),
+      getGlobalState: this.getGlobalState.bind(this),
+      getEditorState: this.getEditorState.bind(this),
       observeVimStates: this.observeVimStates.bind(this),
       onDidAddVimState: this.onDidAddVimState.bind(this),
     }

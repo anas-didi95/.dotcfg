@@ -2,17 +2,18 @@
 settings = require '../lib/settings'
 
 describe "Operator general", ->
-  [set, ensure, ensureByDispatch, keystroke, editor, editorElement, vimState] = []
+  [set, ensure, ensureWait, bindEnsureOption, bindEnsureWaitOption] = []
+  [editor, editorElement, vimState] = []
 
   beforeEach ->
     getVimState (state, vim) ->
       vimState = state
       {editor, editorElement} = vimState
-      {set, ensure, ensureByDispatch, keystroke} = vim
+      {set, ensure, ensureWait, bindEnsureOption, bindEnsureWaitOption} = vim
 
   describe "cancelling operations", ->
     it "clear pending operation", ->
-      keystroke '/'
+      ensure '/'
       expect(vimState.operationStack.isEmpty()).toBe false
       vimState.searchInput.cancel()
       expect(vimState.operationStack.isEmpty()).toBe true
@@ -549,7 +550,7 @@ describe "Operator general", ->
       beforeEach ->
         settings.set('useClipboardAsDefaultRegister', true)
         atom.clipboard.write('___________')
-        ensure register: '"': text: '___________'
+        ensure null, register: '"': text: '___________'
 
       describe "read/write to clipboard through register", ->
         it "writes to clipboard with default register", ->
@@ -637,8 +638,7 @@ describe "Operator general", ->
 
     describe "with a register", ->
       it "saves the line to the a register", ->
-        ensure '" a y y',
-          register: a: text: "012 345\n"
+        ensure '" a y y', register: a: text: "012 345\n"
 
     describe "with A register", ->
       it "append to existing value of lowercase-named register", ->
@@ -937,43 +937,48 @@ describe "Operator general", ->
           """
 
     describe "put-after-with-auto-indent command", ->
+      ensurePutAfterWithAutoIndent = (options) ->
+        dispatch(editor.element, 'vim-mode-plus:put-after-with-auto-indent')
+        ensure(null, options)
+
       beforeEach ->
         waitsForPromise ->
           settings.set('useClipboardAsDefaultRegister', false)
-          atom.packages.activatePackage('language-javascript')
-        runs ->
-          set grammar: 'source.js'
+          atom.packages.activatePackage('language-javascript').then ->
+            set grammar: 'source.js'
 
       describe "paste with auto-indent", ->
         it "inserts the contents of the default register", ->
           set
-            register: '"': {text: " 345\n", type: 'linewise'}
+            register: '"':
+              type: 'linewise'
+              text: " 345\n",
             textC_: """
-            if| () {
-            }
-            """
-          ensureByDispatch 'vim-mode-plus:put-after-with-auto-indent',
-            textC_: """
-            if () {
-              |345
-            }
-            """
-
-        it "multi-line register contents with auto indent", ->
-          registerContent = """
-            if(3) {
-              if(4) {}
-            }
-            """
-          set
-            register: '"': {text: registerContent, type: 'linewise'}
-            textC: """
-            if (1) {
-              |if (2) {
+              if| () {
               }
-            }
-            """
-          ensureByDispatch 'vim-mode-plus:put-after-with-auto-indent',
+              """
+          ensurePutAfterWithAutoIndent
+            textC_: """
+              if () {
+                |345
+              }
+              """
+        it "multi-line register contents with auto indent", ->
+          set
+            register: '"':
+              type: 'linewise'
+              text: """
+                if(3) {
+                  if(4) {}
+                }
+                """
+            textC: """
+              if (1) {
+                |if (2) {
+                }
+              }
+              """
+          ensurePutAfterWithAutoIndent
             textC: """
             if (1) {
               if (2) {
@@ -995,13 +1000,13 @@ describe "Operator general", ->
             """
 
         it "keep original layout", ->
-          registerContent = """
+          set register: '"':
+            type: 'linewise'
+            text: """
                a: 123,
             bbbb: 456,
             """
-
-          set register: '"': {text: registerContent, type: 'linewise'}
-          ensureByDispatch 'vim-mode-plus:put-after-with-auto-indent',
+          ensurePutAfterWithAutoIndent
             textC: """
             if (1) {
               if (2) {
@@ -1012,30 +1017,27 @@ describe "Operator general", ->
             """
 
         it "keep original layout [register content have blank row]", ->
-          registerContent = """
-            if(3) {
-            __abc
+          set register: '"':
+            type: 'linewise'
+            text: """
+              if(3) {
+              __abc
 
-            __def
-            }
-            """.replace(/_/g, ' ')
-
-          set register: '"': {text: registerContent, type: 'linewise'}
-          ensureByDispatch 'vim-mode-plus:put-after-with-auto-indent',
+              __def
+              }
+              """.replace(/_/g, ' ')
+          ensurePutAfterWithAutoIndent
             textC_: """
-            if (1) {
-              if (2) {
-                |if(3) {
-                  abc
+              if (1) {
+                if (2) {
+                  |if(3) {
+                    abc
 
-                  def
+                    def
+                  }
                 }
               }
-            }
-            """
-    # HERE
-    # -------------------------
-
+              """
 
     describe "pasting twice", ->
       beforeEach ->
@@ -1043,10 +1045,10 @@ describe "Operator general", ->
           text: "12345\nabcde\nABCDE\nQWERT"
           cursor: [1, 1]
           register: '"': text: '123'
-        keystroke '2 p'
+        ensure '2 p'
 
       it "inserts the same line twice", ->
-        ensure text: "12345\nab123123cde\nABCDE\nQWERT"
+        ensure null, text: "12345\nab123123cde\nABCDE\nQWERT"
 
       describe "when undone", ->
         it "removes both lines", ->
@@ -1090,10 +1092,10 @@ describe "Operator general", ->
         set text: "012\n", cursor: [0, 0]
         set register: '"': text: '345'
         set register: a: text: 'a'
-        keystroke 'P'
+        ensure 'P'
 
       it "inserts the contents of the default register above", ->
-        ensure text: "345012\n", cursor: [0, 2]
+        ensure null, text: "345012\n", cursor: [0, 2]
 
   describe "the . keybinding", ->
     beforeEach ->
@@ -1116,20 +1118,15 @@ describe "Operator general", ->
         cursor: [[0, 0], [1, 0]]
 
     it "replaces a single character", ->
-      ensure 'r x', text: 'x2\nx4\n\n'
-
-    it "does nothing when cancelled", ->
-      ensure 'r escape',
-        text: '12\n34\n\n'
-        mode: 'normal'
+      ensureWait 'r x', text: 'x2\nx4\n\n'
 
     it "remain visual-mode when cancelled", ->
-      ensure 'v r escape',
+      ensureWait 'v r escape',
         text: '12\n34\n\n'
         mode: ['visual', 'characterwise']
 
     it "replaces a single character with a line break", ->
-      ensure 'r enter',
+      ensureWait 'r enter',
         text: '\n2\n\n4\n\n'
         cursor: [[1, 0], [3, 0]]
 
@@ -1138,31 +1135,44 @@ describe "Operator general", ->
         textC_: """
         __a|bc
         """
-      ensure 'r enter',
+      ensureWait 'r enter',
         textC_: """
         __a
         __|c
         """
 
     it "composes properly with motions", ->
-      ensure '2 r x', text: 'xx\nxx\n\n'
+      ensureWait '2 r x', text: 'xx\nxx\n\n'
 
     it "does nothing on an empty line", ->
       set cursor: [2, 0]
-      ensure 'r x', text: '12\n34\n\n'
+      ensureWait 'r x', text: '12\n34\n\n'
 
     it "does nothing if asked to replace more characters than there are on a line", ->
-      ensure '3 r x', text: '12\n34\n\n'
+      ensureWait '3 r x', text: '12\n34\n\n'
+
+    describe "cancellation", ->
+      it "does nothing when cancelled", ->
+        ensureWait 'r escape', text: '12\n34\n\n', mode: 'normal'
+
+      it "keep multi-cursor on cancelled", ->
+        set                textC: "|    a\n!    a\n|    a\n"
+        ensureWait "r escape", textC: "|    a\n!    a\n|    a\n", mode: "normal"
+
+      it "keep multi-cursor on cancelled", ->
+        set                textC: "|**a\n!**a\n|**a\n"
+        ensureWait "v l",      textC: "**|a\n**!a\n**|a\n", selectedText: ["**", "**", "**"], mode: ["visual", "characterwise"]
+        ensureWait "r escape", textC: "**|a\n**!a\n**|a\n", selectedText: ["**", "**", "**"], mode: ["visual", "characterwise"]
 
     describe "when in visual mode", ->
       beforeEach ->
-        keystroke 'v e'
+        ensure 'v e'
 
       it "replaces the entire selection with the given character", ->
-        ensure 'r x', text: 'xx\nxx\n\n'
+        ensureWait 'r x', text: 'xx\nxx\n\n'
 
       it "leaves the cursor at the beginning of the selection", ->
-        ensure 'r x', cursor: [[0, 0], [1, 0]]
+        ensureWait 'r x', cursor: [[0, 0], [1, 0]]
 
     describe "when in visual-block mode", ->
       beforeEach ->
@@ -1180,35 +1190,58 @@ describe "Operator general", ->
           selectedTextOrdered: ['11', '22', '33', '44'],
 
       it "replaces each selection and put cursor on start of top selection", ->
-        ensure 'r x',
-          mode: 'normal'
-          cursor: [1, 4]
-          text: """
-            0:2345
-            1: oxxo
-            2: oxxo
-            3: oxxo
-            4: oxxo\n
-            """
-        set cursor: [1, 0]
-        ensure '.',
-          mode: 'normal'
-          cursor: [1, 0]
-          text: """
-            0:2345
-            xx oxxo
-            xx oxxo
-            xx oxxo
-            xx oxxo\n
-            """
+        runs ->
+          ensureWait 'r x',
+            mode: 'normal'
+            cursor: [1, 4]
+            text: """
+              0:2345
+              1: oxxo
+              2: oxxo
+              3: oxxo
+              4: oxxo\n
+              """
+
+        runs ->
+          set cursor: [1, 0]
+
+        runs ->
+          ensureWait '.',
+            mode: 'normal'
+            cursor: [1, 0]
+            text: """
+              0:2345
+              xx oxxo
+              xx oxxo
+              xx oxxo
+              xx oxxo\n
+              """
 
   describe 'the m keybinding', ->
-    beforeEach ->
-      set text: '12\n34\n56\n', cursor: [0, 1]
+    ensureMarkByMode = (mode) ->
+      _ensure = bindEnsureWaitOption({mode})
+      _ensure "m a", mark: "a": [0, 2]
+      _ensure "l m a", mark: "a": [0, 3]
+      _ensure "j m a", mark: "a": [1, 3]
+      _ensure "j m b", mark: "a": [1, 3], "b": [2, 3]
+      _ensure "l m c", mark: "a": [1, 3], "b": [2, 3], "c": [2, 4]
 
-    it 'marks a position', ->
-      keystroke 'm a'
-      expect(vimState.mark.get('a')).toEqual [0, 1]
+    beforeEach ->
+      set
+        textC: """
+        0:| 12
+        1: 34
+        2: 56
+        """
+
+    it "[normal] can mark multiple positon", ->
+      ensureMarkByMode("normal")
+    it "[vC] can mark", ->
+      ensure "v"
+      ensureMarkByMode(["visual", "characterwise"])
+    it "[vL] can mark", ->
+      ensure "V"
+      ensureMarkByMode(["visual", "linewise"])
 
   describe 'the R keybinding', ->
     beforeEach ->
@@ -1229,33 +1262,34 @@ describe "Operator general", ->
         mode: 'normal'
 
     it "continues beyond end of line as insert", ->
-      ensure 'R',
-        mode: ['insert', 'replace']
+      ensure 'R', mode: ['insert', 'replace']
       editor.insertText "abcde"
       ensure 'escape', text: '12abcde\n67890'
 
     it 'treats backspace as undo', ->
       editor.insertText "foo"
-      keystroke 'R'
+      ensure 'R'
       editor.insertText "a"
       editor.insertText "b"
-      ensure text: "12fooab5\n67890"
+      ensure null, text: "12fooab5\n67890"
 
-      ensure 'backspace', text: "12fooa45\n67890"
+      dispatch(editorElement, 'core:backspace')
+      ensure null, text: "12fooa45\n67890"
+
       editor.insertText "c"
-      ensure text: "12fooac5\n67890"
-      ensure 'backspace backspace',
-        text: "12foo345\n67890"
-        selectedText: ''
+      ensure null, text: "12fooac5\n67890"
 
-      ensure 'backspace',
-        text: "12foo345\n67890"
-        selectedText: ''
+      dispatch(editor.element, 'core:backspace')
+      dispatch(editor.element, 'core:backspace')
+      ensure null, text: "12foo345\n67890", selectedText: ''
+
+      dispatch(editor.element, 'core:backspace')
+      ensure null, text: "12foo345\n67890", selectedText: ''
 
     it "can be repeated", ->
-      keystroke 'R'
+      ensure 'R'
       editor.insertText "ab"
-      keystroke 'escape'
+      ensure 'escape'
       set cursor: [1, 2]
       ensure '.', text: "12ab5\n67ab0", cursor: [1, 3]
       set cursor: [0, 4]
@@ -1265,11 +1299,11 @@ describe "Operator general", ->
       # FIXME don't know how to test this (also, depends on PR #568)
 
     it "repeats correctly when backspace was used in the text", ->
-      keystroke 'R'
+      ensure 'R'
       editor.insertText "a"
-      keystroke 'backspace'
+      dispatch(editor.element, 'core:backspace')
       editor.insertText "b"
-      keystroke 'escape'
+      ensure 'escape'
       set cursor: [1, 2]
       ensure '.', text: "12b45\n67b90", cursor: [1, 2]
       set cursor: [0, 4]
@@ -1290,7 +1324,7 @@ describe "Operator general", ->
       it "replace character unless input isnt new line(\\n)", ->
         ensure 'R', mode: ['insert', 'replace']
         editor.insertText "a\nb\nc"
-        ensure
+        ensure null,
           text: """
             a
             b
@@ -1302,7 +1336,7 @@ describe "Operator general", ->
         ensure 'R', mode: ['insert', 'replace']
         set cursor: [0, 1]
         editor.insertText "a\nb\nc"
-        ensure
+        ensure null,
           text: """
             0a
             b
@@ -1310,7 +1344,9 @@ describe "Operator general", ->
             56789
             """
           cursor: [2, 1]
-        ensure 'backspace',
+
+        dispatch(editor.element, 'core:backspace')
+        ensure null,
           text: """
             0a
             b
@@ -1318,38 +1354,49 @@ describe "Operator general", ->
             56789
             """
           cursor: [2, 0]
-        ensure 'backspace',
+
+        dispatch(editor.element, 'core:backspace')
+        ensure null,
           text: """
             0a
             b34
             56789
             """
           cursor: [1, 1]
-        ensure 'backspace',
+
+        dispatch(editor.element, 'core:backspace')
+        ensure null,
           text: """
             0a
             234
             56789
             """
           cursor: [1, 0]
-        ensure 'backspace',
+
+        dispatch(editor.element, 'core:backspace')
+        ensure null,
           text: """
             0a234
             56789
             """
           cursor: [0, 2]
-        ensure 'backspace',
+
+        dispatch(editor.element, 'core:backspace')
+        ensure null,
           text: """
             01234
             56789
             """
           cursor: [0, 1]
-        ensure 'backspace', # do nothing
+
+        dispatch(editor.element, 'core:backspace') # do nothing
+        ensure null,
           text: """
             01234
             56789
             """
           cursor: [0, 1]
+
         ensure 'escape',
           text: """
             01234
@@ -1360,7 +1407,7 @@ describe "Operator general", ->
       it "repeate multiline text case-1", ->
         ensure 'R', mode: ['insert', 'replace']
         editor.insertText "abc\ndef"
-        ensure
+        ensure null,
           text: """
             abc
             def
@@ -1389,7 +1436,7 @@ describe "Operator general", ->
       it "repeate multiline text case-2", ->
         ensure 'R', mode: ['insert', 'replace']
         editor.insertText "abc\nd"
-        ensure
+        ensure null,
           text: """
             abc
             d4
@@ -1462,3 +1509,166 @@ describe "Operator general", ->
         line2
         line3
         """
+
+  describe 'Select as operator', ->
+    beforeEach ->
+      settings.set('keymapSToSelect', true)
+      jasmine.attachToDOM(editorElement)
+
+    describe "select by target", ->
+      beforeEach ->
+        set
+          textC: """
+          0 |ooo xxx ***
+          1 xxx *** ooo
+
+          3 ooo xxx ***
+          4 xxx *** ooo\n
+          """
+
+      it "select text-object", ->
+        ensure "s p", # p is `i p` shorthand.
+          mode: ["visual", "linewise"]
+          selectedText: "0 ooo xxx ***\n1 xxx *** ooo\n"
+          propertyHead: [1, 13]
+
+      it "select by motion j with stayOnSelectTextObject", ->
+        settings.set("stayOnSelectTextObject", true)
+        ensure "s i p",
+          mode: ["visual", "linewise"]
+          selectedText: "0 ooo xxx ***\n1 xxx *** ooo\n"
+          propertyHead: [1, 2]
+
+      it "select occurrence in text-object with occurrence-modifier", ->
+        ensure "s o p", # p is `i p` shorthand.
+          mode: ["visual", "characterwise"]
+          selectedText: ["ooo", "ooo"]
+          selectedBufferRangeOrdered: [
+            [[0, 2], [0, 5]]
+            [[1, 10], [1, 13]]
+          ]
+
+      it "select occurrence in text-object with preset-occurrence", ->
+        ensure "g o s p", # p is `i p` shorthand.
+          mode: ["visual", "characterwise"]
+          selectedText: ["ooo", "ooo"]
+          selectedBufferRangeOrdered: [
+            [[0, 2], [0, 5]]
+            [[1, 10], [1, 13]]
+          ]
+
+      it "convert presistent-selection into normal selection", ->
+        ensure "v j enter",
+          mode: "normal"
+          persistentSelectionCount: 1
+          persistentSelectionBufferRange: [
+            [[0, 2], [1, 3]]
+          ]
+
+        ensure "j j v j",
+          persistentSelectionCount: 1
+          persistentSelectionBufferRange: [
+            [[0, 2], [1, 3]]
+          ]
+          mode: ["visual", "characterwise"]
+          selectedText: "ooo xxx ***\n4 x"
+
+        # Now it's show time, to convert persistent selection into normal selection
+        # by only `s`.
+        ensure "s",
+          mode: ["visual", "characterwise"]
+          persistentSelectionCount: 0
+          selectedTextOrdered: ["ooo xxx ***\n1 x", "ooo xxx ***\n4 x"]
+
+      it "select preset-occurrence in presistent-selection and normal selection", ->
+        ensure "g o",
+          occurrenceText: ['ooo', 'ooo', 'ooo', 'ooo']
+
+        ensure "V j enter G V",
+          persistentSelectionCount: 1
+          mode: ["visual", "linewise"]
+          selectedText: "4 xxx *** ooo\n"
+
+        ensure "s", # Notice `ooo` in row 3 is EXCLUDED.
+          persistentSelectionCount: 0
+          mode: ["visual", "characterwise"]
+          selectedText: ["ooo", "ooo", "ooo"]
+          selectedBufferRangeOrdered: [
+            [[0, 2], [0, 5]]
+            [[1, 10], [1, 13]]
+            [[4, 10], [4, 13]]
+          ]
+
+      it "select by motion $", ->
+        ensure "s $",
+          mode: ["visual", "characterwise"]
+          selectedText: "ooo xxx ***\n"
+
+      it "select by motion j", ->
+        ensure "s j",
+          mode: ["visual", "linewise"]
+          selectedText: "0 ooo xxx ***\n1 xxx *** ooo\n"
+
+      it "select by motion j v-modifier", ->
+        ensure "s v j",
+          mode: ["visual", "characterwise"]
+          selectedText: "ooo xxx ***\n1 x"
+
+      it "select occurrence by motion G", ->
+        ensure "s o G",
+          mode: ["visual", "characterwise"]
+          selectedText: ["ooo", "ooo", "ooo", "ooo"]
+          selectedBufferRangeOrdered: [
+            [[0, 2], [0, 5]]
+            [[1, 10], [1, 13]]
+            [[3, 2], [3, 5]]
+            [[4, 10], [4, 13]]
+          ]
+
+      it "select occurrence by motion G with explicit V-modifier", ->
+        ensure "s o V G",
+          mode: ["visual", "linewise"]
+          selectedTextOrdered: [
+            "0 ooo xxx ***\n1 xxx *** ooo\n"
+            "3 ooo xxx ***\n4 xxx *** ooo\n"
+          ]
+
+      it "return to normal-mode when fail to select", ->
+        # attempt to select inner-function but there is no function.
+        ensure "s i f",
+          mode: "normal"
+          cursor: [0, 2]
+
+        # attempt to find 'z' but no "z".
+        ensure "s f z",
+          mode: "normal"
+          cursor: [0, 2]
+
+      describe "complex scenario", ->
+        beforeEach ->
+          waitsForPromise ->
+            atom.packages.activatePackage('language-javascript')
+
+          runs ->
+            set
+              grammar: 'source.js'
+              textC: """
+              const result = []
+              for (const !member of members) {
+                let member2 = member + member
+                let member3 = member + member + member
+                result.push(member2, member3)
+              }\n
+              """
+
+        it "select occurrence in a-fold ,reverse(o) then escape to normal-mode", ->
+          ensure "s o z o escape",
+            mode: "normal"
+            textC: """
+            const result = []
+            for (const |member of members) {
+              let member2 = |member + |member
+              let member3 = |member + |member + |member
+              result.push(member2, member3)
+            }\n
+            """

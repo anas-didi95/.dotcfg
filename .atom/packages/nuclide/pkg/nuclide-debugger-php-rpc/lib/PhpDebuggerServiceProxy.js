@@ -177,7 +177,7 @@ Object.defineProperty(module.exports, "defs", {
       location: {
         type: "source",
         fileName: "rpc-types.js",
-        line: 12
+        line: 14
       },
       name: "LogLevel",
       definition: {
@@ -214,7 +214,7 @@ Object.defineProperty(module.exports, "defs", {
       location: {
         type: "source",
         fileName: "PhpDebuggerService.js",
-        line: 28
+        line: 27
       },
       name: "PhpDebuggerSessionConfig",
       definition: {
@@ -287,6 +287,15 @@ Object.defineProperty(module.exports, "defs", {
           },
           optional: false
         }, {
+          name: "scriptArguments",
+          type: {
+            kind: "array",
+            type: {
+              kind: "string"
+            }
+          },
+          optional: false
+        }, {
           name: "dummyRequestFilePath",
           type: {
             kind: "string"
@@ -304,6 +313,12 @@ Object.defineProperty(module.exports, "defs", {
             kind: "string"
           },
           optional: true
+        }, {
+          name: "deferLaunch",
+          type: {
+            kind: "boolean"
+          },
+          optional: false
         }]
       }
     },
@@ -440,7 +455,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "PhpDebuggerService.js",
-            line: 140
+            line: 138
           },
           kind: "function",
           argumentTypes: [{
@@ -460,7 +475,7 @@ Object.defineProperty(module.exports, "defs", {
           location: {
             type: "source",
             fileName: "PhpDebuggerService.js",
-            line: 172
+            line: 170
           },
           kind: "function",
           argumentTypes: [],

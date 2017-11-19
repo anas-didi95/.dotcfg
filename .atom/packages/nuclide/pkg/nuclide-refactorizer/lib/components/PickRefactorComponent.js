@@ -91,6 +91,7 @@ class PickRefactorComponent extends _react.Component {
           refactoring.description
         );
       default:
+        refactoring.kind;
         throw new Error(`Unknown refactoring kind ${refactoring.kind}`);
     }
   }

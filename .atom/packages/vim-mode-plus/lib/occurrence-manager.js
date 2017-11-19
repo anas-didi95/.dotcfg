@@ -1,4 +1,4 @@
-const {Emitter} = require("atom")
+const {Emitter, CompositeDisposable} = require("atom")
 const {shrinkRangeEndToBeforeNewLine, collectRangeInBufferRow} = require("./utils")
 
 module.exports = class OccurrenceManager {
@@ -34,7 +34,7 @@ module.exports = class OccurrenceManager {
   }
 
   markBufferRangeByPattern(pattern, occurrenceType) {
-    const markRange = ({range}) => this.markerLayer.markBufferRange(range, {invalidate: "inside"})
+    const markRange = range => this.markerLayer.markBufferRange(range, {invalidate: "inside"})
     const {editor} = this.vimState
     if (occurrenceType === "subword") {
       const subwordRegex = editor.getLastCursor().subwordRegExp()
@@ -42,10 +42,26 @@ module.exports = class OccurrenceManager {
       editor.scan(pattern, ({range}) => {
         const {row} = range.start
         if (!cache[row]) cache[row] = collectRangeInBufferRow(editor, row, subwordRegex)
-        if (cache[row].some(subwordRange => subwordRange.isEqual(range))) markRange({range})
+        if (cache[row].some(subwordRange => subwordRange.isEqual(range))) markRange(range)
       })
     } else {
-      editor.scan(pattern, markRange)
+      const ranges = []
+      editor.scan(pattern, ({range}) => ranges.push(range))
+      if (this.canCreateMarkersForLength(ranges.length)) ranges.forEach(markRange)
+    }
+  }
+
+  canCreateMarkersForLength(length) {
+    const threshold = this.vimState.getConfig("confirmThresholdOnOccurrenceOperation")
+    if (threshold >= length) {
+      return true
+    } else {
+      const options = {
+        message: `Too many(${length}) occurrences. Do you want to continue?`,
+        detailedMessage: `If you want increase threshold(current: ${threshold}), change "Confirm Threshold On Create Preset Occurrences" configuration.`,
+        buttons: ["Continue", "Cancel"],
+      }
+      return atom.confirm(options) === 0
     }
   }
 
@@ -150,44 +166,87 @@ module.exports = class OccurrenceManager {
   // e.g.
   //  - c(change): So that autocomplete+popup shows at original cursor position or near.
   //  - g U(upper-case): So that undo/redo can respect last cursor position.
-  select() {
-    const isVisualMode = this.vimState.mode === "visual"
-    const indexByOldSelection = new Map()
-    const allRanges = []
+  select(wise) {
+    const closestRangeIndexByOriginalSelection = new Map()
+    const rangesToSelect = []
     const markersSelected = []
     const {editor} = this.vimState
 
     for (const selection of editor.getSelections()) {
-      const markers = this.getMarkersIntersectsWithSelection(selection, isVisualMode)
+      const markers = this.getMarkersIntersectsWithSelection(selection, this.vimState.mode === "visual")
       if (!markers.length) continue
 
       const ranges = markers.map(marker => marker.getBufferRange())
       markersSelected.push(...markers)
-      // [HACK] Place closest range to last so that final last-selection become closest one.
-      // E.g.
-      // `c o f`(change occurrence in a-function) show autocomplete+ popup at closest occurrence.( popup shows at last-selection )
+      // [HACK] Find closest occurrence range and move it to last item in ranges array.
+      // Purpose of this is to make closest range become **last-selection**.
+      // It is important to show autocomplete+ popup at proper position( popup shows up at last-selection ).
+      // E.g. `c o f`(change occurrence in a-function) show autocomplete+ popup at closest occurrence.
       const closestRange = this.getClosestRangeForSelection(ranges, selection)
-      ranges.splice(ranges.indexOf(closestRange), 1)
-      ranges.push(closestRange)
-      allRanges.push(...ranges)
-      indexByOldSelection.set(selection, allRanges.indexOf(closestRange))
+      ranges.splice(ranges.indexOf(closestRange), 1) // remove
+      ranges.push(closestRange) // then push to last
+
+      rangesToSelect.push(...ranges)
+
+      const closestRangeIndex = rangesToSelect.indexOf(closestRange)
+      // Remember connection between originalSelection and index of closestRange.
+      // After select occurrence, selection is re-created, then we have to migrate mutation info using this info.
+      closestRangeIndexByOriginalSelection.set(selection, closestRangeIndex)
     }
 
-    if (allRanges.length) {
-      if (isVisualMode) {
-        // To avoid selected occurrence ruined by normalization when disposing current submode to shift to new submode.
-        this.vimState.modeManager.deactivate()
-        this.vimState.submode = null
+    if (rangesToSelect.length) {
+      const reversed = editor.getLastSelection().isReversed()
+
+      // To avoid selected occurrence ruined by normalization when deactivating blockwise
+      if (this.vimState.isMode("visual", "blockwise")) {
+        this.vimState.activate("visual", "characterwise")
       }
 
-      editor.setSelectedBufferRanges(allRanges)
+      editor.setSelectedBufferRanges(rangesToSelect, {reversed})
       const selections = editor.getSelections()
-      indexByOldSelection.forEach((index, oldSelection) =>
-        this.vimState.mutationManager.migrateMutation(oldSelection, selections[index])
-      )
-
+      closestRangeIndexByOriginalSelection.forEach((closestRangeIndex, originalSelection) => {
+        this.vimState.mutationManager.migrateMutation(originalSelection, selections[closestRangeIndex])
+      })
       this.destroyMarkers(markersSelected)
-      this.vimState.swrap.getSelections(editor).forEach($selection => $selection.saveProperties())
+      this.vimState.swrap.saveProperties(editor, {force: true})
+
+      if (wise === "linewise") {
+        // In linewise-occurence operation, what happens is here
+        // 1. select linewise by applyWise(linewise)
+        // 2. Observe selection.onDidDestroy to remember which selection is detroyed on mergeSelectionsOnSameRows in next step(step3).
+        // 3. mergeSelectionsOnSameRows(), it merge selections in adjacent row, as a result, it destroy some selections.
+        // 4. For destroyed selection, we migrate mutaion for destroyed selection with new selection info.
+
+        for (const $selection of this.vimState.swrap.getSelections(editor)) {
+          $selection.applyWise("linewise")
+        }
+
+        const {mutationsBySelection} = this.vimState.mutationManager
+        const disposables = new CompositeDisposable()
+        const rangeByMutation = new Map()
+        const orphanedMutations = []
+
+        for (const [selection, mutation] of mutationsBySelection) {
+          // Need preserve range while it's alive.
+          rangeByMutation.set(mutation, selection.getBufferRange())
+          disposables.add(selection.onDidDestroy(() => orphanedMutations.push(mutation)))
+        }
+        editor.mergeSelectionsOnSameRows() // This destroy merged selection.
+        disposables.dispose()
+        this.vimState.swrap.saveProperties(editor, {force: true})
+
+        const selections = editor.getSelections()
+        for (const mutation of orphanedMutations) {
+          mutationsBySelection.delete(mutation.selection)
+
+          const range = rangeByMutation.get(mutation)
+          // Selection contains original mutation range is merger selection we should migrate to.
+          const selection = selections.find(selection => selection.getBufferRange().containsRange(range))
+          mutation.selection = selection
+          mutationsBySelection.set(selection, mutation)
+        }
+      }
+
       return true
     } else {
       return false

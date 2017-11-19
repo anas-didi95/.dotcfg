@@ -19,7 +19,9 @@ exports.setConfig = setConfig;
 const config = {
   functionSnippetShouldIncludeArguments: true,
   stopFlowOnExit: true,
-  lazyServer: false
+  lazyServer: false,
+  ideLazyMode: false,
+  canUseFlowBin: false
 };
 
 function getConfig(key) {

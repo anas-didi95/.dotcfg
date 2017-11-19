@@ -80,6 +80,7 @@ class VsDebugSession extends (_V8Protocol || _load_V8Protocol()).default {
     this._onDidOutput = new _rxjsBundlesRxMinJs.Subject();
     this._onDidBreakpoint = new _rxjsBundlesRxMinJs.Subject();
     this._onDidModule = new _rxjsBundlesRxMinJs.Subject();
+    this._onDidLoadSource = new _rxjsBundlesRxMinJs.Subject();
     this._onDidEvent = new _rxjsBundlesRxMinJs.Subject();
   }
 
@@ -121,6 +122,10 @@ class VsDebugSession extends (_V8Protocol || _load_V8Protocol()).default {
 
   observeModuleEvents() {
     return this._onDidModule.asObservable();
+  }
+
+  observeSourceLoadedEvents() {
+    return this._onDidLoadSource.asObservable();
   }
 
   observeAllEvents() {
@@ -204,6 +209,9 @@ class VsDebugSession extends (_V8Protocol || _load_V8Protocol()).default {
         break;
       case 'module':
         this._onDidModule.next(event);
+        break;
+      case 'loadedSource':
+        this._onDidLoadSource.next(event);
         break;
       default:
         this._logger.error('Unknonwn event type:', event);
@@ -402,8 +410,6 @@ class VsDebugSession extends (_V8Protocol || _load_V8Protocol()).default {
         stdio: ['pipe', // stdin
         'pipe', // stdout
         'pipe'],
-        // RN debugger can't be used in `production` environment.
-        // NODE_ENV: 'development',
         env: yield (0, (_process || _load_process()).getOriginalEnvironment)()
       };
       const serverProcess = _this5._serverProcess = _child_process.default.spawn(command, args, options);

@@ -274,7 +274,7 @@ function generateUnmarshalResult(returnType, argsExpression, callExpression) {
       // And finally, convert to a ConnectableObservable with publish.
       return (_babelTypes || _load_babelTypes()).callExpression((_babelTypes || _load_babelTypes()).memberExpression(unmarshalledObservable, (_babelTypes || _load_babelTypes()).identifier('publish')), []);
     default:
-      throw new Error(`Unkown return type ${returnType.kind}.`);
+      throw new Error(`Unknown return type ${returnType.kind}.`);
   }
 }
 
@@ -334,6 +334,7 @@ function objectToLiteral(obj) {
     return (_babelTypes || _load_babelTypes()).numericLiteral(obj);
   } else if (typeof obj === 'boolean') {
     return (_babelTypes || _load_babelTypes()).booleanLiteral(obj);
+    // eslint-disable-next-line eqeqeq
   } else if (obj === null) {
     return (_babelTypes || _load_babelTypes()).nullLiteral();
   } else if (obj === undefined) {

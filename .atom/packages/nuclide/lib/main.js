@@ -7,6 +7,12 @@ exports.serialize = exports.deactivate = exports.activate = exports.config = und
 
 require('./preload-dependencies');
 
+var _nuclideUri;
+
+function _load_nuclideUri() {
+  return _nuclideUri = _interopRequireDefault(require('nuclide-commons/nuclideUri'));
+}
+
 var _FeatureLoader;
 
 function _load_FeatureLoader() {
@@ -24,8 +30,6 @@ var _fs = _interopRequireDefault(require('fs'));
 var _electron = _interopRequireDefault(require('electron'));
 
 var _path = _interopRequireDefault(require('path'));
-
-var _atom = require('atom');
 
 var _atomPackageDeps;
 
@@ -45,16 +49,22 @@ function _load_semver() {
   return _semver = _interopRequireDefault(require('semver'));
 }
 
+var _patchCommands;
+
+function _load_patchCommands() {
+  return _patchCommands = _interopRequireDefault(require('./patchCommands'));
+}
+
 var _installErrorReporter;
 
 function _load_installErrorReporter() {
   return _installErrorReporter = _interopRequireDefault(require('./installErrorReporter'));
 }
 
-var _patchEditors;
+var _installDevTools;
 
-function _load_patchEditors() {
-  return _patchEditors = _interopRequireDefault(require('./patchEditors'));
+function _load_installDevTools() {
+  return _installDevTools = _interopRequireDefault(require('./installDevTools'));
 }
 
 var _package;
@@ -75,12 +85,16 @@ function _load_serviceManager() {
   return _serviceManager = require('../pkg/nuclide-remote-connection/lib/service-manager');
 }
 
+var _UniversalDisposable;
+
+function _load_UniversalDisposable() {
+  return _UniversalDisposable = _interopRequireDefault(require('nuclide-commons/UniversalDisposable'));
+}
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 // The minimum version of Atom required to run Nuclide. Anything less than this and users will get
 // a redbox and Nuclide will not activate.
-
-// eslint-disable-next-line rulesdir/prefer-nuclide-uri
 /**
  * Copyright (c) 2015-present, Facebook, Inc.
  * All rights reserved.
@@ -102,21 +116,27 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
  *
  */
 
-const MINIMUM_SUPPORTED_ATOM_VERSION = '1.18.0';
+const MINIMUM_SUPPORTED_ATOM_VERSION = '1.19.0';
 
 // Install the error reporting even before Nuclide is activated.
+
+// eslint-disable-next-line rulesdir/prefer-nuclide-uri
 let errorReporterDisposable = (0, (_installErrorReporter || _load_installErrorReporter()).default)();
 // Install the logger config before Nuclide is activated.
 (0, (_nuclideLogging || _load_nuclideLogging()).initializeLogging)();
-
-// Patch Text editors to try to eliminate memory leaks.
-(0, (_patchEditors || _load_patchEditors()).default)();
 
 const { remote } = _electron.default;
 
 if (!(remote != null)) {
   throw new Error('Invariant violation: "remote != null"');
 }
+
+// Remove all remote directories up front to prevent packages from using remote URIs
+// before they are ready. The nuclide-remote-projects package manually
+// serializes/deserializes and then reloads these during the activation phase.
+
+
+atom.project.setPaths(atom.project.getPaths().filter(uri => !(_nuclideUri || _load_nuclideUri()).default.isRemote(uri)));
 
 const baseConfig = {
   installRecommendedPackages: {
@@ -225,7 +245,12 @@ function _activate() {
     errorReporterDisposable = (0, (_installErrorReporter || _load_installErrorReporter()).default)();
   }
 
-  disposables = new _atom.CompositeDisposable();
+  if (atom.inDevMode() && process.env.SANDCASTLE == null) {
+    (0, (_installDevTools || _load_installDevTools()).default)();
+  }
+
+  disposables = new (_UniversalDisposable || _load_UniversalDisposable()).default();
+  disposables.add((0, (_patchCommands || _load_patchCommands()).default)());
 
   // Add the "Nuclide" menu, if it's not there already.
   disposables.add(atom.menu.add([{

@@ -401,7 +401,7 @@ endfunction
 
 set number
 
-autocmd filetype * noremap <F2> :w <bar> exec '!clear'<CR>
+autocmd FileType * noremap <F2> :w <bar> exec '!clear'<CR>
 
 autocmd FileType cpp noremap <F3> :w <bar> exec '!g++ -std=c++11 '.shellescape('%').' -o '.shellescape('%:r').' && echo Compile completed.'<CR>
 autocmd FileType cpp noremap <F4> :w <bar> exec '!./'.shellescape('%:r')<CR>
@@ -410,17 +410,17 @@ autocmd FileType cpp noremap <F6> :w <bar> exec '!./'.shellescape('%:r').' < i2 
 autocmd FileType cpp noremap <F7> :w <bar> exec '!./'.shellescape('%:r').' < i3 > o3 && diff -s o3 a3'<CR>
 autocmd FileType cpp noremap <F8> :w <bar> exec '!./'.shellescape('%:r').' < i4 > o4 && diff -s o4 a4'<CR>
 
-"autocmd filetype python noremap <F3> :w <bar> exec '!chmod +x '.shellescape('%').' && echo Function completed.'<CR>
-"autocmd filetype python noremap <F4> :w <bar> exec '!./'.shellescape('%')<CR>
-"autocmd filetype python noremap <F5> :w <bar> exec '!./'.shellescape('%').' < i1 > o1 && diff -s o1 a1'<CR>
-"autocmd filetype python noremap <F6> :w <bar> exec '!./'.shellescape('%').' < i2 > o2 && diff -s o2 a2'<CR>
-"autocmd filetype python noremap <F7> :w <bar> exec '!./'.shellescape('%').' < i3 > o3 && diff -s o3 a3'<CR>
-"autocmd filetype python noremap <F8> :w <bar> exec '!./'.shellescape('%').' < i4 > o4 && diff -s o4 a4'<CR>
+autocmd FileType python noremap <F3> :w <bar> exec '!chmod +x '.shellescape('%').' && echo Function completed.'<CR>
+autocmd FileType python noremap <F4> :w <bar> exec '!./'.shellescape('%')<CR>
+autocmd FileType python noremap <F5> :w <bar> exec '!./'.shellescape('%').' < i1 > o1 && diff -s o1 a1'<CR>
+autocmd FileType python noremap <F6> :w <bar> exec '!./'.shellescape('%').' < i2 > o2 && diff -s o2 a2'<CR>
+autocmd FileType python noremap <F7> :w <bar> exec '!./'.shellescape('%').' < i3 > o3 && diff -s o3 a3'<CR>
+autocmd FileType python noremap <F8> :w <bar> exec '!./'.shellescape('%').' < i4 > o4 && diff -s o4 a4'<CR>
 
-"autocmd filetype java noremap <F3> :w <bar> exec '!javac '.shellescape('%').' && echo Compile completed.'<CR>
-"autocmd filetype java noremap <F4> :w <bar> exec '!java '.shellescape('%:r')<CR>
-"autocmd filetype java noremap <F5> :w <bar> exec '!./'.shellescape('%:r').' < i1 > o1 && diff -s o1 a1'<CR>
-"autocmd filetype java noremap <F6> :w <bar> exec '!./'.shellescape('%:r').' < i2 > o2 && diff -s o2 a2'<CR>
-"autocmd filetype java noremap <F7> :w <bar> exec '!./'.shellescape('%:r').' < i3 > o3 && diff -s o3 a3'<CR>
-"autocmd filetype java noremap <F8> :w <bar> exec '!./'.shellescape('%:r').' < i4 > o4 && diff -s o4 a4'<CR>
+autocmd FileType java noremap <F3> :w <bar> exec '!javac '.shellescape('%').' && echo Compile completed.'<CR>
+autocmd FileType java noremap <F4> :w <bar> exec '!java '.shellescape('%:r')<CR>
+autocmd FileType java noremap <F5> :w <bar> exec '!./'.shellescape('%:r').' < i1 > o1 && diff -s o1 a1'<CR>
+autocmd FileType java noremap <F6> :w <bar> exec '!./'.shellescape('%:r').' < i2 > o2 && diff -s o2 a2'<CR>
+autocmd FileType java noremap <F7> :w <bar> exec '!./'.shellescape('%:r').' < i3 > o3 && diff -s o3 a3'<CR>
+autocmd FileType java noremap <F8> :w <bar> exec '!./'.shellescape('%:r').' < i4 > o4 && diff -s o4 a4'<CR>
 

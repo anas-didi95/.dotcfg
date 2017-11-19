@@ -128,3 +128,13 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 
 alias config='/usr/bin/git --git-dir=/home/anas/.dotcfg/ --work-tree=/home/anas'
+
+#powerline
+command -v powerline-daemon &> /dev/null
+if [ $? -eq 0 ]; then
+    powerline-daemon -q
+    POWERLINE_BASH_CONTINUATION=1
+    POWERLINE_BASH_SELECT=1
+    . /usr/share/powerline/bash/powerline.sh
+fi
+

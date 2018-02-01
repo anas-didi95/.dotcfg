@@ -53,3 +53,15 @@ alias kictzahidah='ssh zahidah@10.101.237.102'
 # username: root (super user)
 # password: password
 alias kictroot='ssh root@10.101.237.102'
+
+# docker
+#alias docker='sudo /usr/bin/docker'
+#alias docker-compose='sudo /usr/bin/docker-compose'
+
+# take over permission
+alias owndir='sudo chown -R $USER:$USER .'
+
+# copy/paste from terminal
+alias cclip='xclip -selection clip'
+alias vclip='xclip -selection clip -o'
+

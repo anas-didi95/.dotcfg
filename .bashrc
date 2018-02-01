@@ -95,6 +95,7 @@ fi
 alias ll='ls -alF'
 alias la='ls -A'
 alias l='ls -CF'
+alias ..='cd ../'
 
 # Add an "alert" alias for long running commands.  Use like so:
 #   sleep 10; alert
@@ -129,6 +130,11 @@ export NVM_DIR="$HOME/.nvm"
 
 alias config='/usr/bin/git --git-dir=/home/anas/.dotcfg/ --work-tree=/home/anas'
 
+#tilix
+if [ $TILIX_ID ] || [ $VTE_VERSION ]; then
+        source /etc/profile.d/vte.sh
+fi
+
 #powerline
 command -v powerline-daemon &> /dev/null
 if [ $? -eq 0 ]; then
@@ -137,4 +143,11 @@ if [ $? -eq 0 ]; then
     POWERLINE_BASH_SELECT=1
     . /usr/share/powerline/bash/powerline.sh
 fi
+
+# Java SDK
+export JAVA_HOME=/usr/java/latest
+
+# Docker fix permission
+export USER_ID=$UID
+export GROUP_ID=$GROUPS
 

@@ -15,6 +15,9 @@
       "source.python": [
         "BUCK"
       ]
+    disabledPackages: [
+      "tree-view"
+    ]
     telemetryConsent: "limited"
   editor:
     fontFamily: "Fira Code"

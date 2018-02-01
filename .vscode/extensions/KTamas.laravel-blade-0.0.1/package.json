@@ -1,0 +1,41 @@
+{
+	"name": "laravel-blade",
+	"displayName": "laravel-blade",
+	"description": "Blade support for VSCode",
+	"version": "0.0.1",
+	"publisher": "KTamas",
+	"engines": {
+		"vscode": "^0.10.10"
+	},
+	"categories": [
+		"Languages"
+	],
+	"contributes": {
+		"languages": [
+			{
+				"id": "laravel-blade",
+				"aliases": [
+					"PHP - Laravel Blade",
+					"laravel-blade",
+					"blade"
+				],
+				"extensions": [
+					".blade.php"
+				],
+				"configuration": "./laravel-blade.configuration.json"
+			}
+		],
+		"grammars": [
+			{
+				"language": "laravel-blade",
+				"scopeName": "text.html.php.laravel-blade",
+				"path": "./syntaxes/laravel-blade.tmLanguage"
+			}
+		]
+	},
+	"__metadata": {
+		"id": "6a3f4c45-83ee-41e1-95ec-2c26fbb75ca9",
+		"publisherId": "009272a0-dd51-4ecb-9a47-ccad1ceaecc8",
+		"publisherDisplayName": "Tamás Kádár (KTamas)"
+	}
+}
